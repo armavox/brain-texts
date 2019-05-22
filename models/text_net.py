@@ -16,13 +16,28 @@ def create_emb_layer(weights_matrix, non_trainable=False):
 class ToyNN(nn.Module):
     def __init__(self, weights_matrix, hidden_size, num_layers):
         super().__init__()
-        self.embedding, num_embeddings, embedding_dim = create_emb_layer(weights_matrix, True)
+        self.embedding, num_embeddings, embedding_dim = create_emb_layer(
+            weights_matrix, True
+        )
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.gru = nn.GRU(embedding_dim, hidden_size, num_layers, batch_first=True)
+        self.gru = nn.GRU(embedding_dim, hidden_size, num_layers,
+                          batch_first=True)
 
     def forward(self, inp, hidden):
         return self.gru(self.embedding(inp), hidden)
 
     def init_hidden(self, batch_size):
-        return Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size))
+        return Variable(torch.zeros(self.num_layers, batch_size,
+                                    self.hidden_size))
+
+# matrix_len = len(target_vocab)
+# weights_matrix = np.zeros((matrix_len, 50))
+# words_found = 0
+
+# for i, word in enumerate(target_vocab):
+#     try: 
+#         weights_matrix[i] = glove[word]
+#         words_found += 1
+#     except KeyError:
+#         weights_matrix[i] = np.random.normal(scale=0.6, size=(emb_dim, ))
