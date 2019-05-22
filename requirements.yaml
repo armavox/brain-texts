@@ -1,0 +1,12 @@
+name: brain-texts
+channels:
+  - defaults
+  - pytorch
+dependencies:
+  - python=3.7
+  - pytorch=1.1.0
+  - bcolz=1.2.1
+  # - pip:
+  #   - dash>=0.36.0
+  #   - imgaug>=0.2.8
+  #   - filterpy>=1.4.5

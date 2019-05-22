@@ -102,3 +102,14 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode
+
+# Repository
+pretrained_embs/*
+!pretrained_embs/embeddings_preproc.py
+Untitled*
