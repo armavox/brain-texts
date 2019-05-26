@@ -93,7 +93,7 @@ class conv3d_relu_pooling(nn.Module):
         self.conv = nn.Sequential(
             nn.Conv3d(in_ch, out_ch, 3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv3d(in_ch, out_ch, 3, padding=1),
+            nn.Conv3d(out_ch, out_ch, 3, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool3d(2)
         )
