@@ -20,6 +20,7 @@ class UNet(nn.Module):
         self.outc = outconv(64, 1)
         self.fc1 = dense(9728, 4096)
         self.fc2 = dense(4096, 1024)
+
         self.regressor = nn.Linear(1024, 1)
 
     def forward(self, x):
@@ -37,7 +38,7 @@ class UNet(nn.Module):
         x = self.outc(x)
         print('outc', x.shape)
         x = self.fc1(x)
-        x = self.fc2(x)
+        # x = self.fc2(x)
         x = self.regressor(x)
         return x
 
