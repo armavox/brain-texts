@@ -8,6 +8,9 @@ dependencies:
   - pandas=0.24.2
   - pytorch=1.1.0
   - torchvision=0.3.0
-  - pydicom>=1.2.2
+  - cudatoolkit=10.0
+  - pydicom=1.2.2
+  - pillow=6.0.0
+  - pip=19.1.1
   - pip:
     - pytorch_pretrained_bert
