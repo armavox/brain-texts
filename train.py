@@ -56,7 +56,7 @@ def main():
         model.train()
         for i, batch in enumerate(dl):
             optimizer.zero_grad()
-            images, labels = batch['image'].to(device), batch['label'].to(device)
+            images, labels = batch['image'].to(device), batch['label'].to(device).float()
             pred = model(images)
             print(f'batch{i}')
             loss = loss_func(pred, labels)

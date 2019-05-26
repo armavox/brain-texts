@@ -18,12 +18,16 @@ class UNet(nn.Module):
         self.up3 = up(256, 64)
         self.up4 = up(128, 64)
         self.outc = outconv(64, 1)
-        self.fc1 = dense(9728, 4096)
+        self.reg1 = conv3d_relu_pooling(1, 16)
+        self.reg2 = conv3d_relu_pooling(16, 32)
+        self.reg3 = conv3d_relu_pooling(32, 64)
+        self.fc1 = dense(15360, 4096)
         self.fc2 = dense(4096, 1024)
 
         self.regressor = nn.Linear(1024, 1)
 
     def forward(self, x):
+        print("inp", x.shape)
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
@@ -37,8 +41,13 @@ class UNet(nn.Module):
         print('UP4', x.shape)
         x = self.outc(x)
         print('outc', x.shape)
+        x = self.reg1(x)
+        x = self.reg2(x)
+        x = self.reg3(x)
+        print("reg", x.shape)
+        x = x.view(-1, x.shape[1] * x.shape[2] * x.shape[3] * x.shape[4])
         x = self.fc1(x)
-        # x = self.fc2(x)
+        x = self.fc2(x)
         x = self.regressor(x)
         return x
 
