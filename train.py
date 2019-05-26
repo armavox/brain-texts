@@ -5,6 +5,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, SequentialSampler
 
 from data_utils import BertFeaturesDataset
+from pytorch_modelsize import SizeEstimator
 from models.unet import UNet
 
 
@@ -39,25 +40,12 @@ def main():
                                batch_size=args.batch_size,
                                torch_device='cpu')
     sampler = SequentialSampler(data)
-    print('befor dl')
     dl = DataLoader(data, args.batch_size, sampler=sampler)
-    print('after dl')
     model = UNet(1)
-    from pytorch_modelsize import SizeEstimator
-    se = SizeEstimator(model, input_size=(1,1,152,256,256))
-    print(se.estimate_size())
+    model.to(device)    
     print(f'UNet using {device}')
-    model.to(device)
-    
-
-    
-    # if device == 'cuda' and n_gpu > 1:
-    #     model = torch.nn.DataParallel(model)
-    # if torch.cuda.is_available():
-    #     if torch.cuda.device_count() > 1:
-    #         print(f'{torch.cuda.device_count()} GPUs used')
-    #         model = torch.nn.DataParallel(model)
-    #     model = model.to(device)
+    if device == 'cuda' and n_gpu > 1:
+        model = torch.nn.DataParallel(model)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, weight_decay=5e-4)
 

@@ -208,7 +208,7 @@ def images_path(path_to_img_folder, patient_name):
 def read_image(path_to_image_file):
     p_array = np.array(pydicom.dcmread(path_to_image_file).pixel_array)
     pil_img = Image.fromarray(p_array)
-    pil_img = pil_img.resize((256, 256))
+    pil_img = pil_img.resize((64, 64))
     p_array = np.array(pil_img)
     p_array = p_array / p_array.max()
     return p_array
