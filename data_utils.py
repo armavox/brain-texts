@@ -23,6 +23,12 @@ import collections
 import logging
 import json
 import re
+import os
+import numpy as np
+import pandas as pd
+import pydicom
+import glob
+from PIL import Image
 
 import torch
 from torch.utils.data import Dataset
@@ -183,6 +189,38 @@ def read_labels(input_file):
         return labels
 
 
+def listdir_nohidden(path):
+    for f in os.listdir(path):
+        if not f.startswith('.'):
+            yield f
+
+
+def images_path(path_to_img_folder, patient_name):
+    path = os.path.join(path_to_img_folder, patient_name)
+    mod_list = list(listdir_nohidden(path))  # TODO: handle several modalities
+    filelist = list(listdir_nohidden(os.path.join(path, mod_list[0])))
+    filelist = sorted(filelist, key=lambda x: int(x[1:]))
+    for file in filelist:
+        yield glob.glob(os.path.join(path_to_img_folder,
+                        patient_name, mod_list[0], file))[0]
+
+
+def read_image(path_to_image_file):
+    p_array = np.array(pydicom.dcmread(path_to_image_file).pixel_array)
+    pil_img = Image.fromarray(p_array)
+    pil_img = pil_img.resize((256, 256))
+    p_array = np.array(pil_img, dtype='int64')
+    return p_array
+
+
+# TODO: Eliminate of bones
+def stack_images(path_to_img_folder, patient_name):
+    image = []
+    for img_path in images_path(path_to_img_folder, patient_name):
+        image.append(read_image(img_path))
+    return np.array(image)
+
+
 class BertFeaturesDataset(Dataset):
     """
     Parameters
@@ -195,10 +233,11 @@ class BertFeaturesDataset(Dataset):
         bert-base-chinese.
     """
 
-    def __init__(self, input_file, labels_file, bert_model,
+    def __init__(self, imgs_folder, input_text_file, labels_file, bert_model,
                  max_seq_length=256, batch_size=4):
 
-        self.input_file = input_file
+        self.imgs_folder = imgs_folder
+        self.input_file = input_text_file
         self.labels_file = labels_file
         self.bert_model = bert_model
         self.max_seq_length = max_seq_length
@@ -211,17 +250,22 @@ class BertFeaturesDataset(Dataset):
         self.dataset = self.get_bert_embeddings(self.tensor_dataset,
                                                 self.bert_model,
                                                 self.batch_size)
-
-        self.labels = read_labels(self.labels_file)
+        df = pd.read_csv(self.labels_file, header=None, dtype={0: str, 1: int})
+        self.labels = df.iloc[:, 1].values
+        self.names = df.iloc[:, 0].to_list()
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        # TODO: ADD IMAGE LOADER
+        name = self.names[idx]
+        img = stack_images(self.imgs_folder, name)
+
         sample = {
+            'image': img,
             'embedding': self.dataset[idx],
-            'label': self.labels[idx]
+            'label': self.labels[idx],
+            'name': self.names[idx]
         }
         return sample
 
