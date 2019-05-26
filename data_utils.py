@@ -209,7 +209,7 @@ def read_image(path_to_image_file):
     p_array = np.array(pydicom.dcmread(path_to_image_file).pixel_array)
     pil_img = Image.fromarray(p_array)
     pil_img = pil_img.resize((256, 256))
-    p_array = np.array(pil_img, dtype='int16')
+    p_array = np.array(pil_img)
     p_array = p_array / p_array.max()
     return p_array
 
@@ -222,7 +222,7 @@ def stack_images(path_to_img_folder, patient_name):
     img_np = np.array(image)
     img_np = img_np[img_np.shape[0] - 152:, :, :]
     # img_np = np.transpose(img_np, (1, 2, 0))
-    img_tensor = torch.tensor(img_np)
+    img_tensor = torch.tensor(img_np, dtype=torch.float)
     return torch.unsqueeze(img_tensor, 0)
 
 
@@ -239,7 +239,7 @@ class BertFeaturesDataset(Dataset):
     """
 
     def __init__(self, imgs_folder, input_text_file, labels_file, bert_model,
-                 max_seq_length=256, batch_size=4):
+                 max_seq_length=256, batch_size=4, torch_device=None):
 
         self.imgs_folder = imgs_folder
         self.input_file = input_text_file
@@ -247,6 +247,7 @@ class BertFeaturesDataset(Dataset):
         self.bert_model = bert_model
         self.max_seq_length = max_seq_length
         self.batch_size = batch_size
+        self.device = torch_device
 
         self.tensor_dataset = self.init_bert_dataset(
             self.input_file, self.labels_file,
@@ -254,7 +255,8 @@ class BertFeaturesDataset(Dataset):
         )
         self.dataset = self.get_bert_embeddings(self.tensor_dataset,
                                                 self.bert_model,
-                                                self.batch_size)
+                                                self.batch_size,
+                                                torch_device=self.device)
         df = pd.read_csv(self.labels_file, header=None, dtype={0: str, 1: int})
         self.labels = df.iloc[:, 1].values
         self.names = df.iloc[:, 0].to_list()
@@ -298,14 +300,11 @@ class BertFeaturesDataset(Dataset):
                              self.all_input_mask,
                              self.all_example_index)
 
-    def get_bert_embeddings(self, tensor_dataset, bert_model, batch_size):
-
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        n_gpu = torch.cuda.device_count()
+    def get_bert_embeddings(self, tensor_dataset, bert_model, batch_size,
+                            torch_device):
+        print(f'BERT using {torch_device}')
         model = BertModel.from_pretrained(bert_model)
-        model.to(device)
-        if n_gpu > 1:
-            model = torch.nn.DataParallel(model)
+        model.to(torch_device)
 
         sampler = SequentialSampler(tensor_dataset)
         dataloader = DataLoader(tensor_dataset, sampler=sampler,

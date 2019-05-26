@@ -26,31 +26,43 @@ def main():
                         help="Batch size for predictions.")
     parser.add_argument('--max_seq_length', default=256, type=int,
                         help="Seq size for texts embeddings.")
+    parser.add_argument('--no_cuda', action='store_true')
 
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
-    # if n_gpu > 1:
-    #     model = torch.nn.DataParallel(model)
+    n_gpu = torch.cuda.device_count()
 
     data = BertFeaturesDataset(args.imgs_folder, args.texts_file,
                                args.labels_file, args.bert_model,
                                max_seq_length=args.max_seq_length,
-                               batch_size=args.batch_size)
+                               batch_size=args.batch_size,
+                               torch_device='cpu')
     sampler = SequentialSampler(data)
+    print('befor dl')
     dl = DataLoader(data, args.batch_size, sampler=sampler)
-
+    print('after dl')
     model = UNet(1)
-    if torch.cuda.is_available():
-        if torch.cuda.device_count() > 1:
-            print(f'{torch.cuda.device_count()} GPUs used')
-            model = torch.nn.DataParallel(model)
-        model = model.to(device)
+    from pytorch_modelsize import SizeEstimator
+    se = SizeEstimator(model, input_size=(1,1,152,256,256))
+    print(se.estimate_size())
+    print(f'UNet using {device}')
+    model.to(device)
+    
+
+    
+    # if device == 'cuda' and n_gpu > 1:
+    #     model = torch.nn.DataParallel(model)
+    # if torch.cuda.is_available():
+    #     if torch.cuda.device_count() > 1:
+    #         print(f'{torch.cuda.device_count()} GPUs used')
+    #         model = torch.nn.DataParallel(model)
+    #     model = model.to(device)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=0.001, weight_decay=5e-4)
 
     loss_func = nn.MSELoss()
-    model = model.double()
+    # model = model.double()
     for epoch in range(args.epochs):
         train_loss = 0
         model.train()

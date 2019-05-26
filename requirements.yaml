@@ -1,4 +1,4 @@
-name: brain-texts
+name: braintexts
 channels:
   - defaults
   - pytorch
