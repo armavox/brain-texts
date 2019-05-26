@@ -18,8 +18,8 @@ class UNet(nn.Module):
         self.up3 = up(256, 64)
         self.up4 = up(128, 64)
         self.outc = outconv(64, 1)
-        self.fc1 = dense(1024, 2048)
-        self.fc2 = dense(2048, 1024)
+        self.fc1 = dense(1024, 1024)
+        # self.fc2 = dense(2048, 1024)
         self.regressor = nn.Linear(1024, 1)
 
     def forward(self, x):
@@ -34,9 +34,9 @@ class UNet(nn.Module):
         x = self.up4(x, x1)
         x = self.outc(x)
         x = self.fc1(x)
-        x = self.fc2(x)
+        # x = self.fc2(x)
         x = self.regressor(x)
-        return F.sigmoid(x)
+        return x
 
 # class LSTMBrain(nn.Module):
 #     def __init__(self, emb_size, cat_size):
