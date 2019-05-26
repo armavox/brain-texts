@@ -209,7 +209,8 @@ def read_image(path_to_image_file):
     p_array = np.array(pydicom.dcmread(path_to_image_file).pixel_array)
     pil_img = Image.fromarray(p_array)
     pil_img = pil_img.resize((256, 256))
-    p_array = np.array(pil_img, dtype='int64')
+    p_array = np.array(pil_img, dtype='int16')
+    p_array = p_array / p_array.max()
     return p_array
 
 
@@ -218,7 +219,9 @@ def stack_images(path_to_img_folder, patient_name):
     image = []
     for img_path in images_path(path_to_img_folder, patient_name):
         image.append(read_image(img_path))
-    return np.array(image)
+    img_np = np.array(image)
+    img_np = img_np[img_np.shape[0]-152:, :, :]
+    return np.transpose(img_np, (1,2,0))
 
 
 class BertFeaturesDataset(Dataset):
