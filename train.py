@@ -62,10 +62,10 @@ def main():
             loss = loss_func(pred, labels)
             loss.backward()
             optimizer.step()
-            train_loss += loss
+            train_loss += loss.item()
         train_loss /= len(dl)
-        if epoch % 1 != 0:
-            print('Epoch: %04d Train loss: %.4f' % (epoch, train_loss.item()))
+        if epoch % 1 == 0:
+            print('Epoch: %04d Train loss: %.4f' % (epoch, train_loss))
 
 if __name__ == "__main__":
     main()
