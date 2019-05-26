@@ -87,6 +87,20 @@ class outconv(nn.Module):
         return x
 
 
+class conv3d_relu_pooling(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super(conv3d_relu_pooling, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv3d(in_ch, out_ch, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool3d(2)
+        )
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x
+
+
 class dense(nn.Module):
     def __init__(self, in_features, out_features):
         super().__init__()
