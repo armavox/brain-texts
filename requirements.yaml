@@ -1,4 +1,4 @@
-name: brain-texts
+name: braintexts
 channels:
   - defaults
   - pytorch
@@ -9,5 +9,6 @@ dependencies:
   - pytorch=1.1.0
   - torchvision=0.3.0
   - pydicom>=1.2.2
+  - pip=19.1.1
   - pip:
     - pytorch_pretrained_bert
