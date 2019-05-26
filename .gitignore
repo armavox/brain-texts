@@ -113,3 +113,4 @@ venv.bak/
 pretrained_embs/*
 !pretrained_embs/embeddings_preproc.py
 Untitled*
+data/*

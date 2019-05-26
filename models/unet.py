@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .unet_utils import *
+from .unet_utils3d import *
 
 
 class UNet(nn.Module):
@@ -20,7 +20,7 @@ class UNet(nn.Module):
         self.outc = outconv(64, 1)
         self.fc1 = dense(1024, 2048)
         self.fc2 = dense(2048, 1024)
-        self.classifier = nn.Linear(1024, 2)
+        self.regressor = nn.Linear(1024, 1)
 
     def forward(self, x):
         x1 = self.inc(x)
@@ -35,5 +35,11 @@ class UNet(nn.Module):
         x = self.outc(x)
         x = self.fc1(x)
         x = self.fc2(x)
-        x = self.classifier(x)
+        x = self.regressor(x)
         return F.sigmoid(x)
+
+# class LSTMBrain(nn.Module):
+#     def __init__(self, emb_size, cat_size):
+#         super().__init__()
+#         self.fc1 = nn.Linear(emb_size, 1024)
+#         self.fc2 = nn.Linear(1024, )
