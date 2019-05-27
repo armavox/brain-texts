@@ -5,7 +5,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, SequentialSampler
 
 from data_utils import BertFeaturesDataset
-from pytorch_modelsize import SizeEstimator
 from models.unet import UNet
 
 

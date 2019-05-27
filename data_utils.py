@@ -24,10 +24,12 @@ import logging
 import json
 import re
 import os
+import glob
+
 import numpy as np
 import pandas as pd
+import skimage
 import pydicom
-import glob
 from PIL import Image
 
 import torch
@@ -208,7 +210,7 @@ def images_path(path_to_img_folder, patient_name):
 def read_image(path_to_image_file):
     p_array = np.array(pydicom.dcmread(path_to_image_file).pixel_array)
     pil_img = Image.fromarray(p_array)
-    pil_img = pil_img.resize((64, 64))
+    # pil_img = pil_img.resize((64, 64))
     p_array = np.array(pil_img)
     p_array = p_array / p_array.max()
     return p_array
@@ -221,6 +223,7 @@ def stack_images(path_to_img_folder, patient_name):
         image.append(read_image(img_path))
     img_np = np.array(image)
     img_np = img_np[img_np.shape[0] - 152:, :, :]
+    img_np = skimage.transform.resize(img_np, (64,64,64))
     # img_np = np.transpose(img_np, (1, 2, 0))
     img_tensor = torch.tensor(img_np, dtype=torch.float)
     return torch.unsqueeze(img_tensor, 0)
@@ -258,7 +261,7 @@ class BertFeaturesDataset(Dataset):
                                                 self.batch_size,
                                                 torch_device=self.device)
         df = pd.read_csv(self.labels_file, header=None, dtype={0: str, 1: int})
-        self.labels = df.iloc[:, 1].values
+        self.labels = np.array(df.iloc[:, 1].values, ndmin=2).T
         self.names = df.iloc[:, 0].to_list()
 
     def __len__(self):
