@@ -4,6 +4,7 @@ from keras.callbacks import ModelCheckpoint
 import matplotlib.pyplot as plt
 import numpy as np
 from datetime import datetime
+np.random.seed(0)
 
 
 class TrainerUNET224:

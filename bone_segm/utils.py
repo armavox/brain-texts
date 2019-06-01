@@ -1,8 +1,8 @@
 import numpy as np
 import glob
 import os
+np.random.seed(0)
 
-import matplotlib.pyplot as plt
 def data_generator(images, batch_size):
     num_samples = len(images)
     while True:
@@ -25,6 +25,7 @@ def data_generator(images, batch_size):
 def split_train_test_data(path, validation_size):
     images = glob.glob(os.path.join(path, "**", "*"))
     np.random.shuffle(images)
+    images = images[150]
 
     num_examples = len(images)
     valid_examples = int(num_examples * validation_size)

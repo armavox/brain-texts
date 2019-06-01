@@ -3,7 +3,8 @@ from bone_segm.TrainerUNET224 import TrainerUNET224
 from bone_segm.utils import data_generator, split_train_test_data
 from keras.optimizers import Adam
 import argparse
-
+import numpy as np
+np.random.seed(0)
 
 def arguments():
     parser = argparse.ArgumentParser()
