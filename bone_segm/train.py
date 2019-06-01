@@ -29,11 +29,11 @@ def arguments():
 def main(opt):
     checkpoint_path = opt.checkpoints
     weight_path = opt.weight
-    lr = opt.lr
-    batch_size = opt.batch_size
+    lr = float(opt.lr)
+    batch_size = int(opt.batch_size)
     data_path = opt.input
     validation_size = opt.valid_size
-    epochs = opt.epochs
+    epochs = int(opt.epochs)
 
     model = ZF_UNET_224(weights_path=weight_path)
     optimizer = Adam(lr=lr)
