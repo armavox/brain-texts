@@ -55,8 +55,8 @@ class NiiReader:
 
         origs, masks = [], []
 
-        for i in range(orig.shape[2]):
-            img, img_mask = orig[:, :, i], mask[:, :, i]
+        for i in range(90, orig.shape[2] - 30):
+            img, img_mask = orig[:, :, i].T, mask[:, :, i].T
             resized = self.resize(image=img, mask=img_mask)
 
             orig_aug, mask_aug = self.augmentation(resized['image'], resized['mask'], count_aug)
@@ -73,4 +73,3 @@ class NiiReader:
 
         for i in range(len(orig)):
             np.save(os.path.join(patient_path, "IM%s" % i), np.array([orig[i], mask[i]]))
-            # np.save(os.path.join(patient_path, "M%s.npy"), orig)
