@@ -102,7 +102,7 @@ class BertFeaturesDataset(Dataset):
 
     def __getitem__(self, idx):
         name = self.names[idx]
-        img = stack_images(self.imgs_folder, name)
+        img = stack_images(self.imgs_folder, name, True)
 
         sample = {
             'image': img,
@@ -307,22 +307,25 @@ def images_path(path_to_img_folder, patient_name):
                         patient_name, mod_list[0], file))[0]
 
 
-def read_image(path_to_image_file):
+def read_image(path_to_image_file, is_torch):
     p_array = np.array(pydicom.dcmread(path_to_image_file).pixel_array)
     pil_img = Image.fromarray(p_array)
-    # pil_img = pil_img.resize((64, 64))
+    if not is_torch:
+        pil_img = pil_img.resize((224, 224))
     p_array = np.array(pil_img)
     p_array = p_array / p_array.max()
     return p_array
 
 
 # TODO: Eliminate of bones
-def stack_images(path_to_img_folder, patient_name):
+def stack_images(path_to_img_folder, patient_name, is_torch):
     image = []
     for img_path in images_path(path_to_img_folder, patient_name):
         image.append(read_image(img_path))
     img_np = np.array(image)
     img_np = img_np[img_np.shape[0] - 152:, :, :]
+    if not is_torch:
+        return (img_np * 255).astype(np.uint8)
     img_np = skimage.transform.resize(img_np, (128, 128, 128))
     # img_np = np.transpose(img_np, (1, 2, 0))
     img_tensor = torch.tensor(img_np, dtype=torch.float)

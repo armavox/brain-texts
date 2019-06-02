@@ -4,7 +4,7 @@ import sys
 if not sys.warnoptions:
     warnings.simplefilter("ignore")
 
-from bone_segm.NiiReader import NiiReader
+from segmentation.utils.NiiReader import NiiReader
 import argparse
 import glob
 import os

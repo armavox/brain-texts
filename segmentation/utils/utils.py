@@ -3,6 +3,7 @@ import glob
 import os
 np.random.seed(0)
 
+
 def data_generator(images, batch_size):
     num_samples = len(images)
     while True:

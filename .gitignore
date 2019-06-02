@@ -114,4 +114,5 @@ pretrained_embs/*
 !pretrained_embs/embeddings_preproc.py
 Untitled*
 data/*
-bone_segm/data/*
+segmentation/weights/*
+.idea/
