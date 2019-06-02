@@ -1,6 +1,6 @@
 from segmentation.model.zf_unet_224_model import ZF_UNET_224
 import numpy as np
-import os
+from segmentation.eval.mask_helper import fixmask_0
 
 
 class TestNet:
@@ -17,6 +17,7 @@ class TestNet:
             mask = masks[i,:,:,0].copy()
             mask = mask / (mask.max() / 255)
             mask = mask.astype(np.uint8)
+            mask = fixmask_0(mask)
 
             orig = origs[i].copy()
             orig[mask == 0] = (0,0,0)
