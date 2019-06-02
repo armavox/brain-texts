@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader, SequentialSampler
 
 from data_utils import BertFeaturesDataset
 from models.unet import UNet
+from models.text_net import BrainLSTM
 
 
 def main():
@@ -41,12 +42,14 @@ def main():
     sampler = SequentialSampler(data)
     dl = DataLoader(data, args.batch_size, sampler=sampler)
     model = UNet(1)
-    model.to(device)    
+    model = model.to(device)
+    lstm = BrainLSTM(768, 256, 2, 2, 1)
+    lstm = lstm.to(device)
     print(f'UNet using {device}')
     if device == 'cuda' and n_gpu > 1:
         model = torch.nn.DataParallel(model)
 
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.001, weight_decay=5e-4)
+    optimizer = torch.optim.SGD(lstm.parameters(), lr=0.001, weight_decay=5e-4)
 
     loss_func = nn.MSELoss()
     # model = model.double()
@@ -55,9 +58,11 @@ def main():
         model.train()
         for i, batch in enumerate(dl):
             optimizer.zero_grad()
-            images, labels = batch['image'].to(device), batch['label'].to(device).float()
-            pred = model(images)
-            print(f'batch{i}')
+            images = batch['image'].to(device)
+            labels = batch['label'].float().to(device)
+            # pred = model(images)
+            pred = lstm(batch['embedding'])
+            print(f'batch{i}, pred {pred}')
             loss = loss_func(pred, labels)
             loss.backward()
             optimizer.step()
