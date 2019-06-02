@@ -3,6 +3,7 @@ channels:
   - defaults
   - pytorch
   - conda-forge
+  - albumentation
 dependencies:
   - python=3.7
   - pandas=0.24.2
@@ -11,6 +12,10 @@ dependencies:
   - cudatoolkit=10.0
   - pydicom=1.2.2
   - pillow=6.0.0
+  - opencv=3.4.2
+  - keras=2.2.4
+  - albumentations=0.2.2
   - pip=19.1.1
   - pip:
     - pytorch_pretrained_bert
+    - nibabel=2.4.1
