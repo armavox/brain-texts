@@ -1,3 +1,9 @@
+import warnings
+import sys
+
+if not sys.warnoptions:
+    warnings.simplefilter("ignore")
+
 from segmentation.eval.TestNet import TestNet
 import argparse
 import data_utils
@@ -40,7 +46,7 @@ def main(opt):
     weight_gliom = opt.weight_gliom
     output_path = opt.output
 
-    patients_id = glob.glob0(input_path, "**")
+    patients_id = glob.glob1(input_path, "G*")
 
     brain_segm = TestNet(weight_brain, "Brain segmentation")
     gliom_segm = TestNet(weight_gliom, "Gliomas segmentation")

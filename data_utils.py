@@ -321,7 +321,7 @@ def read_image(path_to_image_file, is_torch):
 def stack_images(path_to_img_folder, patient_name, is_torch):
     image = []
     for img_path in images_path(path_to_img_folder, patient_name):
-        image.append(read_image(img_path))
+        image.append(read_image(img_path, is_torch))
     img_np = np.array(image)
     img_np = img_np[img_np.shape[0] - 152:, :, :]
     if not is_torch:
