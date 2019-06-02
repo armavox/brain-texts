@@ -88,12 +88,12 @@ class outconv(nn.Module):
 
 
 class conv3d_relu_pooling(nn.Module):
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, kernel=3):
         super(conv3d_relu_pooling, self).__init__()
         self.conv = nn.Sequential(
-            nn.Conv3d(in_ch, out_ch, 3),
+            nn.Conv3d(in_ch, out_ch, kernel),
             nn.ReLU(inplace=True),
-            nn.Conv3d(out_ch, out_ch, 3),
+            nn.Conv3d(out_ch, out_ch, kernel),
             nn.ReLU(inplace=True),
             nn.MaxPool3d(2)
         )

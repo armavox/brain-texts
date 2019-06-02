@@ -223,7 +223,7 @@ def stack_images(path_to_img_folder, patient_name):
         image.append(read_image(img_path))
     img_np = np.array(image)
     img_np = img_np[img_np.shape[0] - 152:, :, :]
-    img_np = skimage.transform.resize(img_np, (64,64,64))
+    img_np = skimage.transform.resize(img_np, (128, 128, 128))
     # img_np = np.transpose(img_np, (1, 2, 0))
     img_tensor = torch.tensor(img_np, dtype=torch.float)
     return torch.unsqueeze(img_tensor, 0)
