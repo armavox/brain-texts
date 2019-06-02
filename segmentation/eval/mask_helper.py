@@ -28,12 +28,43 @@ def remgar(image): #remove garbage
     return cleanimage
 
 
-def fixmask(m):
-    m = m / (m.max() / 255)
-    m = m.astype(np.uint8)
-    _, thr = cv2.threshold(m, 0 , 255, cv2.THRESH_OTSU)
-    m = remgar(thr)
-    m = m.astype(np.uint8)
-    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(75,75)))
-    m = floodfill(m)
-    return m
+def fixmask(mask):
+    # mask = mask / (mask.max() / 255)
+    mask = mask.astype(np.uint8)
+    _, mask = cv2.threshold(mask, 0 , 255, cv2.THRESH_OTSU)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(10,10))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    mask = floodfill(mask)
+    mask = remgar(mask)
+    mask = mask.astype(np.uint8)
+    left = mask[:,:mask.shape[1]//2]
+    right = mask[:,mask.shape[1]//2:]
+    lsum = cv2.countNonZero(left)
+    rsum = cv2.countNonZero(right)
+    if lsum == 0 or rsum == 0:
+        print('Oh no!')
+        return mask
+    else:
+        if max(lsum/rsum, rsum/lsum) < 1.05:
+            return mask
+        else:
+            rl = right[:,::-1]
+            lr = left[:,::-1]
+            if rsum > lsum:
+                d = rl - left
+            else:
+                d = lr - right
+            opening = cv2.morphologyEx(d, cv2.MORPH_OPEN, kernel)
+            if rsum > lsum:
+                fixed = left | opening
+            else:
+                fixed = right | opening
+            fixed = floodfill(fixed)
+            newmask = mask.copy()
+            if rsum > lsum:
+                newmask[:,:mask.shape[0]//2] = fixed
+            else:
+                newmask[:,mask.shape[0]//2:] = fixed
+            newmask = cv2.morphologyEx(newmask, cv2.MORPH_CLOSE, kernel)
+            newmask = floodfill(newmask)
+            return newmask
