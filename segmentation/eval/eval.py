@@ -48,15 +48,17 @@ def main(opt):
 
     patients_id = glob.glob1(input_path, "G*")
 
-    brain_segm = TestNet(weight_brain, "Brain segmentation")
-    gliom_segm = TestNet(weight_gliom, "Gliomas segmentation")
+    brain_segm = TestNet(weight_brain, "Brain segmentation", True)
+    gliom_segm = TestNet(weight_gliom, "Gliomas segmentation", False)
 
     for patient_id in patients_id:
+        patient_saving_path = os.path.join(output_path, "%s.npy" % patient_id)
+
         x = load_patient(input_path, patient_id)
         x = brain_segm.predict(x)
+        np.save(os.path.join(output_path, "brain_%s.npy" % patient_id), x)
         x = gliom_segm.predict(x)
 
-        patient_saving_path = os.path.join(output_path, "%s.npy" % patient_id)
         np.save(patient_saving_path, x)
         print("Patient's gliomas saved to: ", patient_saving_path)
 
