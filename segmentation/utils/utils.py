@@ -26,7 +26,7 @@ def data_generator(images, batch_size):
 def split_train_test_data(path, validation_size):
     images = glob.glob(os.path.join(path, "**", "*"))
     np.random.shuffle(images)
-    images = images[150]
+    images = images[:5500]
 
     num_examples = len(images)
     valid_examples = int(num_examples * validation_size)
