@@ -55,7 +55,8 @@ class BrainLSTM(nn.Module):
             nn.ReLU()
         )
         self.combine = nn.Sequential(
-            nn.Linear(self.hidden_dim, combine_dim)
+            nn.Linear(self.hidden_dim, combine_dim),
+            nn.ReLU()
         )
 
     def forward(self, x):
@@ -72,11 +73,8 @@ class BrainLSTM(nn.Module):
         # x.shape->(seq_len-context_size+1, batch_size, embed_dim*context_size)
 
         # Pass through LSTM and Linear layers
-        h_0 = torch.zeros(self.num_layers, x.size(1), self.hidden_dim)
-        c_0 = torch.zeros(self.num_layers, x.size(1), self.hidden_dim)
-        out, (final_hidden_state, final_cell_state) = self.lstm(x, (h_0, c_0))
+        out, (final_hidden_state, final_cell_state) = self.lstm(x)
         # out.shape -> (seq_len-context_size+1, batch_size, hidden_dim)
-        print(out.shape)
 
         final_encoding = torch.cat((out, x), 2).permute(1, 0, 2)
         # final_encoding.shape -> (batch_size, seq_len-context_size+1,
