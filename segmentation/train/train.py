@@ -1,6 +1,6 @@
-from bone_segm.zf_unet_224_model import ZF_UNET_224, dice_coef_loss, dice_coef
-from bone_segm.TrainerUNET224 import TrainerUNET224
-from bone_segm.utils import data_generator, split_train_test_data
+from segmentation.model.zf_unet_224_model import ZF_UNET_224, dice_coef_loss, dice_coef
+from segmentation.train.TrainerUNET224 import TrainerUNET224
+from segmentation.utils.utils import data_generator, split_train_test_data
 from keras.optimizers import Adam
 import argparse
 import numpy as np
