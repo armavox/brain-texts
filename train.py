@@ -11,6 +11,7 @@ from torch.utils.data import Subset
 
 from data_utils import BertFeaturesDataset, train_val_holdout_split
 from models.unet import UNet
+from models.vgg import VGG, VGG11
 from models.text_net import BrainLSTM
 
 def plot_grad_flow(named_parameters):
@@ -104,13 +105,14 @@ def main():
                             sampler=val_sampler)
     test_loader = DataLoader(test_sampler)
 
-    model = UNet(1)
-    model = model.to(device)
+    vgg = VGG11()
+    vgg = vgg.to(device)
     lstm = BrainLSTM(768, 256, 1, 2, 2)
     lstm = lstm.to(device)
     print(f'UNet using {device}')
     if device == 'cuda' and n_gpu > 1:
-        lstm = torch.nn.DataParallel(lstm)
+        vgg = nn.DataParallel(vgg)
+        lstm = nn.DataParallel(lstm)
 
     optimizer = torch.optim.SGD(lstm.parameters(), lr=0.001, weight_decay=5e-4)
 
@@ -126,10 +128,11 @@ def main():
         train_loss = 0
         for i, batch in enumerate(train_loader):
             optimizer.zero_grad()
-            images = batch['image'].to(device)
-            print(images.is_cuda)
             labels = batch['label'].long().to(device).squeeze(1)
+            images = batch['image'].to(device)
+            print(images.shape)
             embeddings = batch['embedding'].to(device)
+            img_pred = vgg(images)
             pred = lstm(embeddings)
             loss = loss_func(pred, labels)
             loss.backward()

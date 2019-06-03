@@ -106,9 +106,12 @@ class BertFeaturesDataset(Dataset):
         # img = stack_images(self.imgs_folder, name, True)
         img_path = os.path.join(self.imgs_folder, name)
         img = np.load(img_path)[...,0]
+        img = img / 255
+        img_tensor = torch.tensor(img, dtype=torch.float)
+        img_tensor = torch.unsqueeze(img_tensor, 0)
 
         sample = {
-            'image': img,
+            'image': img_tensor,
             'embedding': self.dataset[idx][0],
             'label': self.labels[idx],
             'name': self.names[idx]
