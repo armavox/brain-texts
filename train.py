@@ -13,6 +13,7 @@ from data_utils import BertFeaturesDataset, train_val_holdout_split
 from models.unet import UNet
 from models.vgg import VGG, VGG11
 from models.text_net import BrainLSTM
+from models.fuse import EarlyFusion
 
 def plot_grad_flow(named_parameters, epoch):
     """Plots the gradients flowing through different layers
@@ -65,7 +66,7 @@ def main():
     # Other parameters
     parser.add_argument("--epochs", default=3, type=int,
                         help="Batch size for predictions.")
-    parser.add_argument("--batch_size", default=3, type=int,
+    parser.add_argument("--batch_size", default=4, type=int,
                         help="Batch size for predictions.")
     parser.add_argument('--max_seq_length', default=256, type=int,
                         help="Seq size for texts embeddings.")
@@ -105,24 +106,31 @@ def main():
                             sampler=val_sampler)
     test_loader = DataLoader(test_sampler)
 
-    vgg = VGG11()
-    vgg = vgg.to(device)
+    # vgg = VGG11(combine_dim=2)
+    # vgg = vgg.to(device)
     lstm = BrainLSTM(768, 256, 1, 2, 2)
     lstm = lstm.to(device)
-    print(f'UNet using {device}')
-    if device == 'cuda' and n_gpu > 1:
-        vgg = nn.DataParallel(vgg)
-        print('Hooray')
-        lstm = nn.DataParallel(lstm)
 
-    optimizer = torch.optim.Adam(lstm.parameters(), lr=0.001, weight_decay=5e-4)
+    # model = EarlyFusion(combine_dim=128)
+    # model = BrainLSTM(768, 256, 1, 2, 2)
+    # model = model.to(device)
+    print(f'UNet using {device}')
+    # if torch.cuda.device_count() > 1:
+    #     print(f"Using {n_gpu} CUDAs")
+    #     # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
+    #     model = nn.DataParallel(model)
+    # vgg.load_state_dict(torch.load('checkpoints/vgg20.pth'))
+
+    optimizer = torch.optim.SGD(lstm.parameters(),
+                                lr=0.001, weight_decay=5e-2)
+    lambda2 = lambda epoch: 0.95 ** epoch
+    schedlr = torch.optim.lr_scheduler.LambdaLR(optimizer,
+                                                lr_lambda=[lambda2])
 
     # loss_func = nn.MSELoss()
     # loss_func = nn.NLLLoss()
     # softmax = nn.LogSoftmax(dim=1)
     loss_func = nn.CrossEntropyLoss()
-
-    # model = model.double()
     
     for epoch in range(args.epochs):
         lstm.train()
@@ -132,12 +140,12 @@ def main():
             labels = batch['label'].long().to(device).squeeze(1)
             images = batch['image'].to(device)
             embeddings = batch['embedding'].to(device)
-            img_pred = vgg(images)
+            # pred = model(embeddings, images)
             pred = lstm(embeddings)
-            loss = loss_func(img_pred, labels)
+            loss = loss_func(pred, labels)
             loss.backward()
-            plot_grad_flow(vgg.named_parameters(), epoch)
-            optimizer.step()
+            plot_grad_flow(lstm.named_parameters(), epoch)
+            schedlr.step()
             train_loss += np.sqrt(loss.cpu().item())
         train_loss /= len(train_loader)
         if epoch % 1 == 0:
@@ -147,18 +155,23 @@ def main():
         if epoch % 10 == 0:
             lstm.eval()
             val_loss = 0
+            correct, total = 0, 0
             with torch.no_grad():
                 for batch in val_loader:
                     images = batch['image'].to(device)
                     labels = batch['label'].long().to(device).squeeze(1)
                     embeddings = batch['embedding'].to(device)
-                    img_pred = vgg(images)
+                    # img_pred = vgg(images)
                     pred = lstm(embeddings)
-                    loss = loss_func(img_pred, labels)
-                    val_loss += loss_func(pred, labels) 
+                    # loss = loss_func(pred, labels)
+                    val_loss += loss_func(pred, labels)
+                    pred = pred.data.max(1)[1]
+                    correct += pred.eq(labels.data.view_as(pred)).cpu().sum()
+                    total += labels.size(0)
                 val_loss /= len(val_loader)
-                print('            Val loss: %.4f' % (val_loss.item()))
-                torch.save(vgg.state_dict(), f'checkpoints/vgg{epoch}.pth')
+                acc = 100. * correct / total
+                print('  Val loss: %.4f Acc: %.2f' % (val_loss.item(), acc))
+                torch.save(lstm.state_dict(), f'checkpoints/fuse{epoch}.pth')
 
 
 if __name__ == "__main__":
