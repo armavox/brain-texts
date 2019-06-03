@@ -27,7 +27,8 @@ def arguments():
 
 
 def load_patient(general_path, patient_id):
-    x = data_utils.stack_images(general_path, patient_id, False)
+    # x = data_utils.stack_images(general_path, patient_id, False)
+    x = data_utils.load_mgh(general_path, patient_id)
 
     if len(x.shape) == 3:
         xx = np.empty((x.shape[0], x.shape[1], x.shape[1], 3), dtype = np.uint8)
@@ -46,7 +47,7 @@ def main(opt):
     weight_gliom = opt.weight_gliom
     output_path = opt.output
 
-    patients_id = glob.glob1(input_path, "G*")
+    patients_id = glob.glob1(input_path, "P*")
 
     brain_segm = TestNet(weight_brain, "Brain segmentation", True)
     gliom_segm = TestNet(weight_gliom, "Gliomas segmentation", False)

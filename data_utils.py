@@ -30,6 +30,7 @@ import glob
 import numpy as np
 import pandas as pd
 import skimage
+import nibabel
 import pydicom
 from PIL import Image
 
@@ -101,8 +102,10 @@ class BertFeaturesDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        name = self.names[idx]
-        img = stack_images(self.imgs_folder, name, True)
+        name = self.names[idx] + '.npy'
+        # img = stack_images(self.imgs_folder, name, True)
+        img_path = os.path.join(self.imgs_folder, name)
+        img = np.load(img_path)[...,0]
 
         sample = {
             'image': img,
@@ -297,14 +300,20 @@ def listdir_nohidden(path):
             yield f
 
 
-def images_path(path_to_img_folder, patient_name):
+def images_path(path_to_img_folder, patient_name, mode='mgh'):
     path = os.path.join(path_to_img_folder, patient_name)
-    mod_list = list(listdir_nohidden(path))  # TODO: handle several modalities
-    filelist = list(listdir_nohidden(os.path.join(path, mod_list[0])))
-    filelist = sorted(filelist, key=lambda x: int(x[1:]))
-    for file in filelist:
-        yield glob.glob(os.path.join(path_to_img_folder,
-                        patient_name, mod_list[0], file))[0]
+    if mode == 'gliomas':
+        mod_list = list(listdir_nohidden(path))
+        filelist = list(listdir_nohidden(os.path.join(path, mod_list[0])))
+        filelist = sorted(filelist, key=lambda x: int(x[1:]))
+        for file in filelist:
+            yield glob.glob(os.path.join(path_to_img_folder,
+                            patient_name, mod_list[0], file))[0]
+    elif mode == 'mgh':
+        filelist = list(listdir_nohidden(path))
+        for file in filelist:
+            yield glob.glob(os.path.join(path_to_img_folder,
+                            patient_name, file))[0]
 
 
 def read_image(path_to_image_file, is_torch):
@@ -330,3 +339,75 @@ def stack_images(path_to_img_folder, patient_name, is_torch):
     # img_np = np.transpose(img_np, (1, 2, 0))
     img_tensor = torch.tensor(img_np, dtype=torch.float)
     return torch.unsqueeze(img_tensor, 0)
+
+
+def load_mgh(path_to_img_folder, patient_name):
+    for img_path in images_path(path_to_img_folder, patient_name, mode='mgh'):
+        print(img_path)
+        image = nibabel.freesurfer.mghformat.load(img_path)
+        img_np = np.array(image.get_data())
+        img_np /= img_np.max()
+        img_np *= 255
+        img_np = img_np.astype(np.uint8)
+        img_np = np.transpose(img_np, (2, 1, 0))  # (C, W, H) & vertical align
+        img_np = skimage.transform.resize(img_np, (224, 224, 224),
+                                          preserve_range=True)
+        img_np = img_np.astype(np.uint8)
+    
+    return img_np
+
+
+
+def train_val_holdout_split(dataset, ratios=[0.7, 0.2, 0.1]):
+    """Return indices for subsets of the dataset.
+    Parameters
+    ----------
+    dataset : torch.utils.data.Dataset
+        Dataset made with class which inherits `torch.utils.data.Dataset`
+    ratios : list of floats
+        List of [train, val, holdout] ratios respectively. Note, that sum of 
+        values must be equal to 1. (train + val + holdout = 1.0)
+    """
+
+    assert np.allclose(ratios[0] + ratios[1] + ratios[2], 1)
+    train_ratio = ratios[0]
+    val_ratio = ratios[1]
+    test_ratio = ratios[2]
+
+    df_size = len(dataset)
+
+    train_inds = np.random.choice(range(df_size), 
+                                  size=int(df_size*train_ratio),
+                                  replace=False)
+
+    val_test_inds = list(set(range(df_size)) - set(train_inds))
+    val_inds = np.random.choice(
+        val_test_inds,
+        size=int(len(val_test_inds) * val_ratio / (val_ratio +test_ratio)),
+        replace=False
+    )
+
+    test_inds = np.asarray(list(set(val_test_inds) - set(val_inds)),
+                           dtype='int')
+
+    set_ = set(train_inds) - set(val_inds) - set(test_inds)
+    assert len(list(set_)) == len(train_inds)
+
+    return train_inds, val_inds, test_inds
+
+
+if __name__ == "__main__":
+    imgs_folder = '/data/brain-skull-stripped/rs/'
+    labels_file = '/data/brain-skull-stripped/dataset/brain-labels.csv'
+    input_text_file = '/data/brain-skull-stripped/dataset/annotations.txt'
+    bert_model = 'bert-base-uncased'
+    data = BertFeaturesDataset(imgs_folder, input_text_file, labels_file, 
+                               bert_model,
+                 max_seq_length=256, batch_size=4, torch_device=None)
+    
+    print(data[0]['image'].shape)
+    print(data[0]['embedding'].shape)
+    print(data[0]['label'])
+    print(data[0]['name'])
+
+

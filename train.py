@@ -5,9 +5,11 @@ from matplotlib.lines import Line2D
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, SequentialSampler
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, SequentialSampler, SubsetRandomSampler
+from torch.utils.data import Subset
 
-from data_utils import BertFeaturesDataset
+from data_utils import BertFeaturesDataset, train_val_holdout_split
 from models.unet import UNet
 from models.text_net import BrainLSTM
 
@@ -49,20 +51,20 @@ def plot_grad_flow(named_parameters):
 def main():
     parser = argparse.ArgumentParser()
 
-    # Required parameters
-    parser.add_argument("--imgs_folder", default=None, type=str, required=True)
-    parser.add_argument("--texts_file", default=None, type=str, required=True)
-    parser.add_argument("--labels_file", default=None, type=str, required=True)
-    parser.add_argument("--bert_model", default=None, type=str, required=True,
-                        help="Bert pre-trained model selected in the list: "
-                             "bert-base-uncased, bert-large-uncased,"
-                             "bert-base-cased, bert-base-multilingual,"
-                             "bert-base-chinese.")
+# Required parameters
+# parser.add_argument("--imgs_folder", default=None, type=str, required=True)
+# parser.add_argument("--texts_file", default=None, type=str, required=True)
+# parser.add_argument("--labels_file", default=None, type=str, required=True)
+# parser.add_argument("--bert_model", default=None, type=str, required=True,
+#                     help="Bert pre-trained model selected in the list: "
+#                          "bert-base-uncased, bert-large-uncased,"
+#                          "bert-base-cased, bert-base-multilingual,"
+#                          "bert-base-chinese.")
 
     # Other parameters
     parser.add_argument("--epochs", default=3, type=int,
                         help="Batch size for predictions.")
-    parser.add_argument("--batch_size", default=2, type=int,
+    parser.add_argument("--batch_size", default=4, type=int,
                         help="Batch size for predictions.")
     parser.add_argument('--max_seq_length', default=256, type=int,
                         help="Seq size for texts embeddings.")
@@ -75,46 +77,83 @@ def main():
     )
     n_gpu = torch.cuda.device_count()
 
-    data = BertFeaturesDataset(args.imgs_folder, args.texts_file,
-                               args.labels_file, args.bert_model,
+    ###
+    imgs_folder = '/data/brain-skull-stripped/rs/'
+    input_text_file = '/data/brain-skull-stripped/dataset/annotations.txt'
+    labels_file = '/data/brain-skull-stripped/dataset/brain-labels.csv'
+    bert_model = 'bert-base-uncased'
+    ###
+    data = BertFeaturesDataset(imgs_folder, input_text_file,
+                               labels_file, bert_model,
                                max_seq_length=args.max_seq_length,
                                batch_size=args.batch_size,
                                torch_device='cpu')
-    sampler = SequentialSampler(data)
-    dl = DataLoader(data, args.batch_size, sampler=sampler)
+    
+    np.random.seed(0)  # TODO: saving indices for test phase
+    train_inds, val_inds, test_inds = train_val_holdout_split(
+        data, ratios=[0.6,0.4,0]
+    )
+    print('INDS', train_inds, val_inds, test_inds)
+    train_sampler = SubsetRandomSampler(train_inds)
+    val_sampler = SubsetRandomSampler(val_inds)
+    test_sampler = Subset(data, test_inds)
+
+    train_loader = DataLoader(data, batch_size=args.batch_size,
+                              sampler=train_sampler)
+    val_loader = DataLoader(data, batch_size=args.batch_size*2,
+                            sampler=val_sampler)
+    test_loader = DataLoader(test_sampler)
+
     model = UNet(1)
     model = model.to(device)
-    lstm = BrainLSTM(768, 256, 1, 2, 1)
+    lstm = BrainLSTM(768, 256, 1, 2, 2)
     lstm = lstm.to(device)
     print(f'UNet using {device}')
     if device == 'cuda' and n_gpu > 1:
-        model = torch.nn.DataParallel(model)
+        lstm = torch.nn.DataParallel(lstm)
 
     optimizer = torch.optim.SGD(lstm.parameters(), lr=0.001, weight_decay=5e-4)
 
-    loss_func = nn.MSELoss()
+    # loss_func = nn.MSELoss()
+    # loss_func = nn.NLLLoss()
+    # softmax = nn.LogSoftmax(dim=1)
+    loss_func = nn.CrossEntropyLoss()
+
     # model = model.double()
-    model.train()
+    
     for epoch in range(args.epochs):
+        lstm.train()
         train_loss = 0
-        for i, batch in enumerate(dl):
+        for i, batch in enumerate(train_loader):
             optimizer.zero_grad()
             images = batch['image'].to(device)
-            labels = batch['label'].float().to(device)
+            print(images.is_cuda)
+            labels = batch['label'].long().to(device).squeeze(1)
             embeddings = batch['embedding'].to(device)
             pred = lstm(embeddings)
             loss = loss_func(pred, labels)
-            print(pred.cpu().detach().numpy(), labels.cpu().detach().numpy())
-            print('LOSS', np.sqrt(loss.cpu().item()))
             loss.backward()
-            # print(lstm.lstm.weight_ih_l0.grad.shape)
-            # print(lstm.lstm.weight_hh_l0.grad.shape)
-            plot_grad_flow(lstm.named_parameters())
+            # plot_grad_flow(lstm.named_parameters())
             optimizer.step()
             train_loss += np.sqrt(loss.cpu().item())
-        train_loss /= len(dl)
+        train_loss /= len(train_loader)
         if epoch % 1 == 0:
             print('Epoch: %04d Train loss: %.4f' % (epoch, train_loss))
+
+        # VALIDATE
+        if epoch % 3 == 0:
+            lstm.eval()
+            val_loss = 0
+            with torch.no_grad():
+                for batch in val_loader:
+                    images = batch['image'].to(device)
+                    labels = batch['label'].long().to(device).squeeze(1)
+                    embeddings = batch['embedding'].to(device)
+                    pred = lstm(embeddings)
+                    val_loss += loss_func(pred, labels) 
+                val_loss /= len(val_loader)
+                print('            Val loss: %.4f' % (val_loss.item()))
+
 
 if __name__ == "__main__":
     main()
