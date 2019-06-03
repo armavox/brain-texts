@@ -105,13 +105,13 @@ def main():
                             sampler=val_sampler)
     test_loader = DataLoader(test_sampler)
 
-    vgg = VGG11()
-    vgg = vgg.to(device)
+    # vgg = VGG11()
+    # vgg = vgg.to(device)
     lstm = BrainLSTM(768, 256, 1, 2, 2)
     lstm = lstm.to(device)
     print(f'UNet using {device}')
     if device == 'cuda' and n_gpu > 1:
-        vgg = nn.DataParallel(vgg)
+        # vgg = nn.DataParallel(vgg)
         lstm = nn.DataParallel(lstm)
 
     optimizer = torch.optim.SGD(lstm.parameters(), lr=0.001, weight_decay=5e-4)
@@ -130,13 +130,12 @@ def main():
             optimizer.zero_grad()
             labels = batch['label'].long().to(device).squeeze(1)
             images = batch['image'].to(device)
-            print(images.shape)
             embeddings = batch['embedding'].to(device)
-            img_pred = vgg(images)
+            # img_pred = vgg(images)
             pred = lstm(embeddings)
             loss = loss_func(pred, labels)
             loss.backward()
-            # plot_grad_flow(lstm.named_parameters())
+            plot_grad_flow(lstm.named_parameters())
             optimizer.step()
             train_loss += np.sqrt(loss.cpu().item())
         train_loss /= len(train_loader)
@@ -147,14 +146,20 @@ def main():
         if epoch % 3 == 0:
             lstm.eval()
             val_loss = 0
+            correct, total = 0, 0
             with torch.no_grad():
                 for batch in val_loader:
                     images = batch['image'].to(device)
                     labels = batch['label'].long().to(device).squeeze(1)
                     embeddings = batch['embedding'].to(device)
                     pred = lstm(embeddings)
-                    val_loss += loss_func(pred, labels) 
+                    val_loss += loss_func(pred, labels)
+                    pred = pred.data.max(1)[1]
+                    correct += pred.eq(labels.data.view_as(pred)).cpu().sum()
+                    total += labels.size(0)
                 val_loss /= len(val_loader)
+                accuracy = 100. * correct / total
+                print(accuracy)
                 print('            Val loss: %.4f' % (val_loss.item()))
 
 
