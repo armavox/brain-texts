@@ -14,7 +14,7 @@ from models.unet import UNet
 from models.vgg import VGG, VGG11
 from models.text_net import BrainLSTM
 
-def plot_grad_flow(named_parameters):
+def plot_grad_flow(named_parameters, epoch):
     """Plots the gradients flowing through different layers
     in the net during training. Can be used for checking for
     possible gradient vanishing / exploding problems.
@@ -40,14 +40,14 @@ def plot_grad_flow(named_parameters):
     plt.ylim(bottom = -0.001, top=0.02) # zoom in on the lower gradient regions
     plt.xlabel("Layers")
     plt.ylabel("Average gradient")
-    plt.title("Gradient flow")
+    plt.title(f"Epoch{epoch}. Gradient flow")
     plt.grid(True)
     plt.legend([Line2D([0], [0], color="c", lw=4),
                 Line2D([0], [0], color="b", lw=4),
                 Line2D([0], [0], color="k", lw=4)],
                 ['max-gradient', 'mean-gradient', 'zero-gradient'])
     plt.tight_layout()
-    plt.savefig('asd.png')
+    plt.savefig(f'epoch_{epoch}_gf.png')
 
 def main():
     parser = argparse.ArgumentParser()
@@ -65,7 +65,7 @@ def main():
     # Other parameters
     parser.add_argument("--epochs", default=3, type=int,
                         help="Batch size for predictions.")
-    parser.add_argument("--batch_size", default=4, type=int,
+    parser.add_argument("--batch_size", default=3, type=int,
                         help="Batch size for predictions.")
     parser.add_argument('--max_seq_length', default=256, type=int,
                         help="Seq size for texts embeddings.")
@@ -112,9 +112,10 @@ def main():
     print(f'UNet using {device}')
     if device == 'cuda' and n_gpu > 1:
         vgg = nn.DataParallel(vgg)
+        print('Hooray')
         lstm = nn.DataParallel(lstm)
 
-    optimizer = torch.optim.SGD(lstm.parameters(), lr=0.001, weight_decay=5e-4)
+    optimizer = torch.optim.Adam(lstm.parameters(), lr=0.001, weight_decay=5e-4)
 
     # loss_func = nn.MSELoss()
     # loss_func = nn.NLLLoss()
@@ -130,13 +131,12 @@ def main():
             optimizer.zero_grad()
             labels = batch['label'].long().to(device).squeeze(1)
             images = batch['image'].to(device)
-            print(images.shape)
             embeddings = batch['embedding'].to(device)
             img_pred = vgg(images)
             pred = lstm(embeddings)
-            loss = loss_func(pred, labels)
+            loss = loss_func(img_pred, labels)
             loss.backward()
-            # plot_grad_flow(lstm.named_parameters())
+            plot_grad_flow(vgg.named_parameters(), epoch)
             optimizer.step()
             train_loss += np.sqrt(loss.cpu().item())
         train_loss /= len(train_loader)
@@ -144,7 +144,7 @@ def main():
             print('Epoch: %04d Train loss: %.4f' % (epoch, train_loss))
 
         # VALIDATE
-        if epoch % 3 == 0:
+        if epoch % 10 == 0:
             lstm.eval()
             val_loss = 0
             with torch.no_grad():
@@ -152,10 +152,13 @@ def main():
                     images = batch['image'].to(device)
                     labels = batch['label'].long().to(device).squeeze(1)
                     embeddings = batch['embedding'].to(device)
+                    img_pred = vgg(images)
                     pred = lstm(embeddings)
+                    loss = loss_func(img_pred, labels)
                     val_loss += loss_func(pred, labels) 
                 val_loss /= len(val_loader)
                 print('            Val loss: %.4f' % (val_loss.item()))
+                torch.save(vgg.state_dict(), f'checkpoints/vgg{epoch}.pth')
 
 
 if __name__ == "__main__":

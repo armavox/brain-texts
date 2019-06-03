@@ -133,19 +133,24 @@ class VGG11(nn.Module):
                          ceil_mode=False)
         )
 
-        self.avgpool = nn.AdaptiveAvgPool3d(output_size=7)
+        self.avgpool = nn.AdaptiveAvgPool3d(output_size=1)
 
         self.classifier = nn.Sequential(
-            nn.Linear(in_features=25088, out_features=4096, bias=True),
+            nn.Linear(in_features=512, out_features=512, bias=True),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.5),
-            nn.Linear(in_features=4096, out_features=4096, bias=True),
+            nn.Linear(in_features=512, out_features=256, bias=True),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.5),
-            nn.Linear(in_features=4096, out_features=2, bias=True)
+            nn.Linear(in_features=256, out_features=2, bias=True)
         )
 
     def forward(self, x):
         x = self.features(x)
-        print(x.shape)
+        # print('INSIDE', x.shape)
+        x = self.avgpool(x)
+        x = x.view(x.size(0), -1)
+        # print('INSIDE', x.shape)
+        x = self.classifier(x)
+        # print('INSIDE', x.shape)
         return x

@@ -106,6 +106,9 @@ class BertFeaturesDataset(Dataset):
         # img = stack_images(self.imgs_folder, name, True)
         img_path = os.path.join(self.imgs_folder, name)
         img = np.load(img_path)[...,0]
+        img = skimage.transform.resize(img, (128, 128, 128),
+                                       preserve_range=True)
+        img = img.astype(np.uint8)
         img = img / 255
         img_tensor = torch.tensor(img, dtype=torch.float)
         img_tensor = torch.unsqueeze(img_tensor, 0)
