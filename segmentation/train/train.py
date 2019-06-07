@@ -6,6 +6,15 @@ import argparse
 import numpy as np
 np.random.seed(0)
 
+from keras.backend.tensorflow_backend import set_session
+import tensorflow as tf
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9)
+config = tf.ConfigProto(gpu_options=gpu_options)
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
+set_session(session)
+
+
 def arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input", type=str,
@@ -19,7 +28,7 @@ def arguments():
                         help="Learning rate. Default: 0.001")
     parser.add_argument("-bs", "--batch_size", type=int, default=4,
                         help="Batch size. Default: 4")
-    parser.add_argument("-e", "--epochs", type=int, default=10,
+    parser.add_argument("-e", "--epochs", type=int, default=50,
                         help="Count of epochs. Default: 10")
     parser.add_argument("-vs", "--valid_size", type=float, default=0.2,
                         help="Part of data for validation. Default: 0.2")
@@ -27,15 +36,17 @@ def arguments():
 
 
 def main(opt):
-    checkpoint_path = opt.checkpoints
+    checkpoint_path = "/home/anton/Un/brain-texts/data/checkpoints"  # opt.checkpoints
     weight_path = opt.weight
     lr = float(opt.lr)
     batch_size = int(opt.batch_size)
-    data_path = opt.input
+    data_path = "/home/anton/Un/brain-texts/data/dataset_aug"  # opt.input
     validation_size = opt.valid_size
     epochs = int(opt.epochs)
 
-    model = ZF_UNET_224(weights_path=weight_path)
+    prefix = "lr=%s_bs=%s" % (lr, batch_size)
+
+    model = ZF_UNET_224()
     optimizer = Adam(lr=lr)
     model.compile(optimizer=optimizer, loss=dice_coef_loss, metrics=[dice_coef])
 
@@ -50,7 +61,7 @@ def main(opt):
                              checkpoint_path=checkpoint_path,
                              epochs=epochs,
                              train_steps_per_epoch=len(train) // batch_size + 1,
-                             val_steps_per_epoch=len(val) // batch_size + 1)
+                             val_steps_per_epoch=len(val) // batch_size + 1, prefix=prefix)
 
     trainer.train_model()
 

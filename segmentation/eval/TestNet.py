@@ -30,6 +30,7 @@ class TestNet:
     def predict(self, x):
         print(self.tester_name, " is working")
         pred = self.model.predict(x)
+        pred = np.array(pred)
 
         return self.apply_mask(x, pred)
 

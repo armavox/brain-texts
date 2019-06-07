@@ -8,7 +8,7 @@ np.random.seed(0)
 
 
 class TrainerUNET224:
-    def __init__(self,model: Model, train_loader, val_loader, checkpoint_path,
+    def __init__(self, model: Model, train_loader, val_loader, checkpoint_path, prefix,
                  epochs=5, train_steps_per_epoch=100, val_steps_per_epoch=10, key_for_saving="val_dice_coef"):
         self.model = model
         self.train_loader = train_loader
@@ -22,6 +22,7 @@ class TrainerUNET224:
         self.key_for_saving = key_for_saving
 
         self.epochs = epochs
+        self.prefix = prefix
 
         self.__prepare()
 
@@ -48,7 +49,7 @@ class TrainerUNET224:
         plt.xlabel("Epoch #")
         plt.ylabel("Loss")
         plt.legend(loc="upper right")
-        plt.savefig( os.path.join(self.plots_path, "loss_%s.png" % time_str))
+        plt.savefig( os.path.join(self.plots_path, "%s_loss_%s.png" % (self.prefix, time_str)))
         plt.close()
 
         plt.style.use("ggplot")
@@ -58,5 +59,5 @@ class TrainerUNET224:
         plt.xlabel("Epoch #")
         plt.ylabel(self.key_for_saving)
         plt.legend(loc="upper right")
-        plt.savefig( os.path.join(self.plots_path, "metric_%s.png" % time_str))
+        plt.savefig( os.path.join(self.plots_path, "%s_metric_%s.png" % (self.prefix, time_str)))
         plt.close()
