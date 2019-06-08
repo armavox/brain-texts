@@ -1,4 +1,4 @@
-from segmentation.model.zf_unet_224_model import ZF_UNET_224, dice_coef_loss, dice_coef
+from segmentation.model.zf_unet_224_model import ZF_UNET_224, DiceBCELoss, dice_coef_loss, dice_coef
 from segmentation.train.TrainerUNET224 import TrainerUNET224
 from segmentation.utils.utils import data_generator, split_train_test_data
 from keras.optimizers import Adam
@@ -36,11 +36,11 @@ def arguments():
 
 
 def main(opt):
-    checkpoint_path = "/home/anton/Un/brain-texts/data/checkpoints"  # opt.checkpoints
+    checkpoint_path = opt.checkpoints
     weight_path = opt.weight
     lr = float(opt.lr)
     batch_size = int(opt.batch_size)
-    data_path = "/home/anton/Un/brain-texts/data/dataset_aug"  # opt.input
+    data_path = opt.input
     validation_size = opt.valid_size
     epochs = int(opt.epochs)
 
@@ -48,7 +48,7 @@ def main(opt):
 
     model = ZF_UNET_224()
     optimizer = Adam(lr=lr)
-    model.compile(optimizer=optimizer, loss=dice_coef_loss, metrics=[dice_coef])
+    model.compile(optimizer=optimizer, loss=DiceBCELoss(), metrics=[dice_coef])
 
     train, val = split_train_test_data(path=data_path, validation_size=validation_size)
 

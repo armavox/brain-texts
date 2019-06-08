@@ -18,6 +18,9 @@ from keras.layers.core import SpatialDropout2D, Activation
 from keras import backend as K
 from keras.layers.merge import concatenate
 from keras.utils.data_utils import get_file
+from keras.losses import binary_crossentropy
+
+import tensorflow as tf
 
 # Number of image channels (for example 3 in case of RGB, or 1 for grayscale images)
 INPUT_CHANNELS = 3
@@ -33,20 +36,64 @@ def preprocess_input(x):
     return x
 
 
+def flatten(y):
+    y = K.flatten(y)
+    y = K.greater_equal(y, 0.5)
+    y = K.cast(y, K.floatx())
+
+    return y
+
+
 def dice_coef(y_true, y_pred):
     eps = 1e-15
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
+
+    y_true_f = flatten(y_true)
+    y_pred_f = flatten(y_pred)
+
     intersection = K.sum(y_true_f * y_pred_f)
     return (2.0 * intersection + eps) / (K.sum(y_true_f) + K.sum(y_pred_f) + eps)
 
 
 def jacard_coef(y_true, y_pred):
     eps = 1e-15
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
+
+    y_true_f = flatten(y_true)
+    y_pred_f = flatten(y_pred)
+
     intersection = K.sum(y_true_f * y_pred_f)
     return (intersection + eps) / (K.sum(y_true_f) + K.sum(y_pred_f) - intersection + eps)
+
+
+class JacardBCELoss:
+    def __init__(self, weight=0.8):
+        self.weight = weight
+
+    def __call__(self, y_true, y_pred):
+        y_true = flatten(y_true)
+        y_pred = flatten(y_pred)
+
+        loss = (1 - self.weight) * binary_crossentropy(y_true, y_pred)
+
+        if self.weight:
+            loss -= self.weight * jacard_coef(y_true, y_pred)
+
+        return loss
+
+
+class DiceBCELoss:
+    def __init__(self, weight=0.8):
+        self.weight = weight
+
+    def __call__(self, y_true, y_pred):
+        y_true = flatten(y_true)
+        y_pred = flatten(y_pred)
+
+        loss = (1 - self.weight) * binary_crossentropy(y_true, y_pred)
+
+        if self.weight:
+            loss -= self.weight * dice_coef(y_true, y_pred)
+
+        return loss
 
 
 def jacard_coef_loss(y_true, y_pred):
