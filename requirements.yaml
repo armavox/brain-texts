@@ -1,4 +1,4 @@
-name: braintexts
+name: brain-texts
 channels:
   - defaults
   - pytorch
@@ -13,7 +13,7 @@ dependencies:
   - pydicom=1.2.2
   - pillow=6.0.0
   - opencv=3.4.2
-  - keras=2.2.4
+  - keras-gpu=2.2.4
   - albumentations=0.2.2
   - pip=19.1.1
   - pip:
