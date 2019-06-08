@@ -15,6 +15,7 @@ from models.vgg import VGG, VGG11
 from models.text_net import BrainLSTM
 from models.fuse import EarlyFusion
 
+
 def plot_grad_flow(named_parameters, epoch):
     """Plots the gradients flowing through different layers
     in the net during training. Can be used for checking for
