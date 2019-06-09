@@ -16,7 +16,7 @@ def arguments():
                         help="Path to folder with patients")
     parser.add_argument("-o", "--output", type=str,
                         help="Path to output folder")
-    parser.add_argument("-a", "--aug", type=int, default=2,
+    parser.add_argument("-a", "--aug", type=int, default=3,
                         help="Count augmented images per slice. Default: 2")
     parser.add_argument("-he", "--height", type=int, default=224,
                         help="Height of output slices. Default: 224")
@@ -43,8 +43,8 @@ def get_orig_mask_filenames_from_patient_directory(patient_path):
 if __name__ == '__main__':
     opt = arguments()
 
-    datapath = r"/home/anton/Un/brain-texts/data/rs-mhd-dataset" # opt.input
-    path_save = r"/home/anton/Un/brain-texts/data/dataset_aug" # opt.output
+    datapath = r"/data/brain/rs-mhd-dataset" # opt.input
+    path_save = r"/data/brain/rs-mhd-dataset-augmented" # opt.output
     patients = glob.glob1(datapath, "**")
 
     template_orig = 'sub-%s_ses-NFB3_T1w.nii.gz'

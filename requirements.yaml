@@ -3,7 +3,7 @@ channels:
   - defaults
   - pytorch
   - conda-forge
-  - albumentation
+  - albumentations
 dependencies:
   - python=3.7
   - pandas=0.24.2
@@ -18,4 +18,7 @@ dependencies:
   - pip=19.1.1
   - pip:
     - pytorch_pretrained_bert
-    - nibabel=2.4.1
+    - nibabel==2.4.1
+    - SimpleITK==1.2.0
+    - imgaug>=0.2.5,<0.2.7
+    - opencv-python-headless

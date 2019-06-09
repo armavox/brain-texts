@@ -78,10 +78,10 @@ def load_patient(general_path, patient_id):
 import matplotlib.pyplot as plt
 
 def main(opt):
-    input_path = "/home/anton/Un/brain-texts/data/rs-mhd-dataset"#opt.input
-    weight_brain = "/home/anton/Un/brain-texts/data/weights-12.hdf5" #opt.weight_brain
-    weight_gliom = opt.weight_gliom
-    output_path = opt.output
+    input_path = "/data/brain/rs-mhd-dataset"#opt.input
+    weight_brain = "/home/armavox/pyprojects/brain-texts/segmentation/weights/weights-43.hdf5" #opt.weight_brain
+    # weight_gliom = opt.weight_gliom
+    # output_path = opt.output
 
     patients_id = glob.glob1(input_path, "AR*")
 
@@ -91,7 +91,7 @@ def main(opt):
     for patient_id in patients_id:
         if patient_id == "AR-5":
             continue
-        patient_saving_path = os.path.join(input_path, patient_id, "%s_brain_segmented.mhd" % patient_id)
+        patient_saving_path = os.path.join(input_path, patient_id, "%s_rs_mask.mhd" % patient_id)
 
         x = load_patient(input_path, patient_id)
         x = brain_segm.predict(x)
