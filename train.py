@@ -33,11 +33,11 @@ def main():
     # Other parameters
     parser.add_argument("-e", "--epochs", default=3, type=int,
                         help="Batch size for predictions.")
-    parser.add_argument("--batch_size", default=4, type=int,
+    parser.add_argument("--batch-size", default=4, type=int,
                         help="Batch size for predictions.")
-    parser.add_argument('--max_seq_length', default=256, type=int,
+    parser.add_argument('--max-seq-length', default=256, type=int,
                         help="Seq size for texts embeddings.")
-    parser.add_argument('--no_cuda', action='store_true')
+    parser.add_argument('--no-cuda', action='store_true')
 
     args = parser.parse_args()
 
@@ -52,15 +52,17 @@ def main():
     labels_file = '/data/brain/rs-mhd-dataset/brain-labels.csv'
     bert_model = 'bert-base-uncased'
     ###
+
     data = BertFeaturesDataset(imgs_folder, input_text_file,
                                labels_file, bert_model,
                                max_seq_length=args.max_seq_length,
                                batch_size=args.batch_size,
-                               torch_device='cpu')
+                               bert_device='cpu',
+                               resize_to=64)
     
     np.random.seed(0)  # TODO: saving indices for test phase
     train_inds, val_inds, test_inds = train_val_holdout_split(
-        data, ratios=[0.6,0.4,0]
+        data, ratios=[0.6, 0.4, 0]
     )
     print('INDS', train_inds, val_inds, test_inds)
     train_sampler = SubsetRandomSampler(train_inds)
@@ -69,13 +71,14 @@ def main():
 
     train_loader = DataLoader(data, batch_size=args.batch_size,
                               sampler=train_sampler)
-    val_loader = DataLoader(data, batch_size=args.batch_size*2,
+    val_loader = DataLoader(data, batch_size=args.batch_size * 2,
                             sampler=val_sampler)
     test_loader = DataLoader(test_sampler)
 
-    # vgg = VGG11(combine_dim=2)
-    # vgg = vgg.to(device)
-    lstm = BrainLSTM(768, 256, 1, 2, 2)
+    vgg = VGG11(combine_dim=2)
+    vgg = vgg.to(device)
+    lstm = BrainLSTM(embed_dim=768, hidden_dim=256, num_layers=1,
+                     context_size=2, combine_dim=2, dropout=0)
     lstm = lstm.to(device)
 
     # model = EarlyFusion(combine_dim=128)
@@ -94,25 +97,33 @@ def main():
 
     loss_func = nn.CrossEntropyLoss()
 
+    # TRAINING
     for epoch in range(args.epochs):
         lstm.train()
         train_loss = 0
         for i, batch in enumerate(train_loader):
-            optimizer.zero_grad()
+
             labels = batch['label'].long().to(device).squeeze(1)
             images = batch['image'].to(device)
             embeddings = batch['embedding'].to(device)
+
+            out = vgg(images)
             pred = lstm(embeddings)
-            loss = loss_func(pred, labels)
+
+            loss = loss_func(out, labels)
             loss.backward()
-            plot_grad_flow(lstm.named_parameters(), epoch, 'grad_flow_plots')
-            optimizer.step()
+
+            plot_grad_flow(vgg.named_parameters(), epoch, 'grad_flow_plots')
             train_loss += np.sqrt(loss.cpu().item())
+
+            optimizer.step()
+            optimizer.zero_grad()
+
         train_loss /= len(train_loader)
         if epoch % 1 == 0:
             print('Epoch: %04d Train loss: %.4f' % (epoch, train_loss))
 
-        # VALIDATE
+        # VALIDATION
         if epoch % 10 == 0:
             lstm.eval()
             val_loss = 0

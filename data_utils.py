@@ -78,7 +78,7 @@ class BertFeaturesDataset(Dataset):
 
     def __init__(self, imgs_folder, input_text_file, labels_file, bert_model,
                  max_seq_length=256, batch_size=4, resize_to=128,
-                 torch_device=None):
+                 bert_device=None):
 
         self.imgs_folder = imgs_folder
         self.input_file = input_text_file
@@ -87,7 +87,7 @@ class BertFeaturesDataset(Dataset):
         self.max_seq_length = max_seq_length
         self.batch_size = batch_size
         self.rsz = resize_to
-        self.device = torch_device
+        self.device = bert_device
 
         self.tensor_dataset = self.init_bert_dataset(
             self.input_file, self.labels_file,
@@ -96,7 +96,7 @@ class BertFeaturesDataset(Dataset):
         self.dataset = self.get_bert_embeddings(self.tensor_dataset,
                                                 self.bert_model,
                                                 self.batch_size,
-                                                torch_device=self.device)
+                                                bert_device=self.device)
         df = pd.read_csv(self.labels_file, header=None, dtype={0: str, 1: int})
         self.labels = np.array(df.iloc[:, 1].values, ndmin=2).T
         self.names = df.iloc[:, 0].to_list()
@@ -152,10 +152,10 @@ class BertFeaturesDataset(Dataset):
                              self.all_example_index)
 
     def get_bert_embeddings(self, tensor_dataset, bert_model, batch_size,
-                            torch_device):
-        print(f'BERT using {torch_device}')
+                            bert_device):
+        print(f'BERT using {bert_device}')
         model = BertModel.from_pretrained(bert_model)
-        model.to(torch_device)
+        model.to(bert_device)
 
         sampler = SequentialSampler(tensor_dataset)
         dataloader = DataLoader(tensor_dataset, sampler=sampler,
@@ -441,7 +441,7 @@ if __name__ == "__main__":
     bert_model = 'bert-base-uncased'
     data = BertFeaturesDataset(imgs_folder, input_text_file, labels_file,
                                bert_model, max_seq_length=256, batch_size=4,
-                               torch_device='cpu')
+                               bert_device='cpu')
     print(len(data))
     print(data[0]['image'].shape)
     print(data[0]['embedding'].shape)
