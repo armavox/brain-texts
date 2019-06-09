@@ -33,6 +33,7 @@ import skimage
 import nibabel
 import pydicom
 from PIL import Image
+import SimpleITK as sitk
 
 import torch
 from torch.utils.data import Dataset
@@ -76,7 +77,8 @@ class BertFeaturesDataset(Dataset):
     """
 
     def __init__(self, imgs_folder, input_text_file, labels_file, bert_model,
-                 max_seq_length=256, batch_size=4, torch_device=None):
+                 max_seq_length=256, batch_size=4, resize_to=128,
+                 torch_device=None):
 
         self.imgs_folder = imgs_folder
         self.input_file = input_text_file
@@ -84,6 +86,7 @@ class BertFeaturesDataset(Dataset):
         self.bert_model = bert_model
         self.max_seq_length = max_seq_length
         self.batch_size = batch_size
+        self.rsz = resize_to
         self.device = torch_device
 
         self.tensor_dataset = self.init_bert_dataset(
@@ -102,16 +105,18 @@ class BertFeaturesDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, idx):
-        name = self.names[idx] + '.npy'
+        name = self.names[idx] + '_rs_mask.mhd'
         # img = stack_images(self.imgs_folder, name, True)
         img_path = os.path.join(self.imgs_folder, name)
-        img = np.load(img_path)[...,0]
-        # img = skimage.transform.resize(img, (128, 128, 128),
-        #                                preserve_range=True)
+        img = read_mhd(img_path)[0][..., 0]
+
+        # img = np.load(img_path)[...,0]
+        img = skimage.transform.resize(img, (self.rsz, self.rsz, self.rsz),
+                                       preserve_range=True)
         # img = img.astype(np.uint8)
-        i = np.random.randint(0, 224)
+
         img = img / 255
-        img_tensor = torch.tensor(img[i, ...], dtype=torch.float)
+        img_tensor = torch.tensor(img, dtype=torch.float)
         img_tensor = torch.unsqueeze(img_tensor, 0)
 
         sample = {
@@ -166,6 +171,27 @@ class BertFeaturesDataset(Dataset):
                 embedding_dataset.append(embedding)
 
         return TensorDataset(torch.cat(embedding_dataset, dim=0))
+
+
+def read_mhd(filename):
+    """This funciton reads a '.mhd' file using SimpleITK
+        and return the image array, origin and spacing of the image.
+        """
+    # Reads the image using SimpleITK
+    itkimage = sitk.ReadImage(filename)
+
+    # Convert the image to a  numpy array first and then
+    # shuffle the dimensions to get axis in the order z,y,x
+    ct_scan = sitk.GetArrayFromImage(itkimage)
+
+    # Read the origin of the ct_scan, will be used to convert
+    # the coordinates from world to voxel and vice versa.
+    origin = np.array(list(reversed(itkimage.GetOrigin())))
+
+    # Read the spacing along each dimension
+    spacing = np.array(list(reversed(itkimage.GetSpacing())))
+
+    return ct_scan, origin, spacing
 
 
 def convert_examples_to_features(examples, seq_length, tokenizer):
@@ -360,9 +386,8 @@ def load_mgh(path_to_img_folder, patient_name):
         img_np = skimage.transform.resize(img_np, (224, 224, 224),
                                           preserve_range=True)
         img_np = img_np.astype(np.uint8)
-    
-    return img_np
 
+    return img_np
 
 
 def train_val_holdout_split(dataset, ratios=[0.7, 0.2, 0.1]):
@@ -383,8 +408,8 @@ def train_val_holdout_split(dataset, ratios=[0.7, 0.2, 0.1]):
 
     df_size = len(dataset)
 
-    train_inds = np.random.choice(range(df_size), 
-                                  size=int(df_size*train_ratio),
+    train_inds = np.random.choice(range(df_size),
+                                  size=int(df_size * train_ratio),
                                   replace=False)
 
     val_test_inds = list(set(range(df_size)) - set(train_inds))
@@ -404,17 +429,21 @@ def train_val_holdout_split(dataset, ratios=[0.7, 0.2, 0.1]):
 
 
 if __name__ == "__main__":
-    imgs_folder = '/data/brain-skull-stripped/rs/'
-    labels_file = '/data/brain-skull-stripped/dataset/brain-labels.csv'
-    input_text_file = '/data/brain-skull-stripped/dataset/annotations.txt'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--imgs-folder', type=str)
+    parser.add_argument('--labels-file', type=str)
+    parser.add_argument('--input-text-file', type=str)
+    args = parser.parse_args()
+
+    imgs_folder = args.imgs_folder or '/data/brain-skull-stripped/rs/'
+    labels_file = args.labels_file or '/data/brain-skull-stripped/dataset/brain-labels.csv'
+    input_text_file = args.input_text_file or '/data/brain-skull-stripped/dataset/annotations.txt'
     bert_model = 'bert-base-uncased'
-    data = BertFeaturesDataset(imgs_folder, input_text_file, labels_file, 
-                               bert_model,
-                 max_seq_length=256, batch_size=4, torch_device=None)
-    
+    data = BertFeaturesDataset(imgs_folder, input_text_file, labels_file,
+                               bert_model, max_seq_length=256, batch_size=4,
+                               torch_device='cpu')
+    print(len(data))
     print(data[0]['image'].shape)
     print(data[0]['embedding'].shape)
     print(data[0]['label'])
     print(data[0]['name'])
-
-

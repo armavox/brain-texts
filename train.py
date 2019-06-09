@@ -9,13 +9,12 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, SequentialSampler, SubsetRandomSampler
 from torch.utils.data import Subset
 
+from utils import plot_grad_flow
 from data_utils import BertFeaturesDataset, train_val_holdout_split
 from models.unet import UNet
 from models.vgg import VGG, VGG11
 from models.text_net import BrainLSTM
 from models.fuse import EarlyFusion
-
-
 
 
 def main():
@@ -99,7 +98,7 @@ def main():
     # loss_func = nn.NLLLoss()
     # softmax = nn.LogSoftmax(dim=1)
     loss_func = nn.CrossEntropyLoss()
-    
+
     for epoch in range(args.epochs):
         lstm.train()
         train_loss = 0

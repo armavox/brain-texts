@@ -14,14 +14,14 @@ class TestNet:
         result = []
 
         for i in range(len(origs)):
-            mask = masks[i,:,:,0].copy()
+            mask = masks[i, :, :, 0].copy()
             mask = mask / (mask.max() / 255)
             mask = mask.astype(np.uint8)
             if self.need_fix_mask:
                 mask = fixmask(mask)
 
             orig = origs[i].copy()
-            orig[mask == 0] = (0,0,0)
+            orig[mask == 0] = (0, 0, 0)
 
             result.append(orig)
 
@@ -33,6 +33,3 @@ class TestNet:
         pred = np.array(pred)
 
         return self.apply_mask(x, pred)
-
-
-
