@@ -56,9 +56,7 @@ def main(opt):
     model = ZF_UNET_224()
     optimizer = Adam(lr=lr)
 
-    model_224.WEIGHT_LOSS = dice_weight
-
-    model.compile(optimizer=optimizer, loss=DiceBCELoss, metrics=[dice_coef])
+    model.compile(optimizer=optimizer, loss=DiceBCELoss(dice_weight), metrics=[dice_coef])
 
     train, val = split_train_test_data(path=data_path, validation_size=validation_size)
 

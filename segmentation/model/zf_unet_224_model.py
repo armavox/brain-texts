@@ -29,7 +29,6 @@ OUTPUT_MASK_CHANNELS = 1
 # Pretrained weights
 ZF_UNET_224_WEIGHT_PATH = 'https://github.com/ZFTurbo/ZF_UNET_224_Pretrained_Model/releases/download/v1.0/zf_unet_224.h5'
 
-WEIGHT_LOSS = 0.8
 
 def preprocess_input(x):
     x /= 256
@@ -66,29 +65,37 @@ def jacard_coef(y_true, y_pred):
     return (intersection + eps) / (K.sum(y_true_f) + K.sum(y_pred_f) - intersection + eps)
 
 
-def JacardBCELoss(y_true, y_pred):
-    y_true = flatten(y_true, True)
-    y_pred = flatten(y_pred)
 
-    loss = (1 - WEIGHT_LOSS) * binary_crossentropy(y_true, y_pred)
+class JacardBCELoss:
+    def __init__(self, weight=0.8):
+        self.weight = weight
 
-    if WEIGHT_LOSS:
-        loss -= WEIGHT_LOSS * jacard_coef(y_true, y_pred)
+    def __call__(self, y_true, y_pred):
+        y_true = flatten(y_true, True)
+        y_pred = flatten(y_pred)
 
-    return loss
+        loss = (1 - self.weight) * binary_crossentropy(y_true, y_pred)
+
+        if self.weight:
+            loss -= self.weight * jacard_coef(y_true, y_pred)
+
+        return loss
 
 
-def DiceBCELoss(y_true, y_pred):
-    y_true = flatten(y_true, True)
-    y_pred = flatten(y_pred)
+class DiceBCELoss:
+    def __init__(self, weight=0.8):
+        self.weight = weight
 
-    loss = (1 - WEIGHT_LOSS) * binary_crossentropy(y_true, y_pred)
+    def __call__(self, y_true, y_pred):
+        y_true = flatten(y_true, True)
+        y_pred = flatten(y_pred)
 
-    if WEIGHT_LOSS:
-        loss -= WEIGHT_LOSS * dice_coef(y_true, y_pred)
+        loss = (1 - self.weight) * binary_crossentropy(y_true, y_pred)
 
-    return loss
+        if self.weight:
+            loss -= self.weight * dice_coef(y_true, y_pred)
 
+        return loss
 
 
 def jacard_coef_loss(y_true, y_pred):

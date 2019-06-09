@@ -14,7 +14,8 @@ def data_generator(images, batch_size):
                 y_data = []
                 for im in images[i:i+batch_size]:
                     data = np.load(im)
-                    x_data.append(np.stack((data[0], ) * 3, -1))
+                    # x_data.append(np.stack((data[0], ) * 3, -1))
+                    x_data.append(data[0])
                     y_data.append(data[1])
 
                 yield np.array(x_data), np.array(y_data)
