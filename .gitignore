@@ -116,5 +116,4 @@ Untitled*
 data/*
 segmentation/weights/*
 .idea/
-checkpoints/*
-!checkpoints/.gitignore
+

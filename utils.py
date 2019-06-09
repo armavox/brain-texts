@@ -1,9 +1,10 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 
-def plot_grad_flow(named_parameters, epoch):
+def plot_grad_flow(named_parameters, epoch, out_dir):
     """Plots the gradients flowing through different layers
     in the net during training. Can be used for checking for
     possible gradient vanishing / exploding problems.
@@ -36,4 +37,8 @@ def plot_grad_flow(named_parameters, epoch):
                 Line2D([0], [0], color="k", lw=4)],
                 ['max-gradient', 'mean-gradient', 'zero-gradient'])
     plt.tight_layout()
-    plt.savefig(f'epoch_{epoch}_gf.png')
+
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+
+    plt.savefig(os.path.join(out_dir, f'epoch_{epoch}_gf.png'))

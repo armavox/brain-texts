@@ -31,7 +31,7 @@ def main():
 #                          "bert-base-chinese.")
 
     # Other parameters
-    parser.add_argument("--epochs", default=3, type=int,
+    parser.add_argument("-e", "--epochs", default=3, type=int,
                         help="Batch size for predictions.")
     parser.add_argument("--batch_size", default=4, type=int,
                         help="Batch size for predictions.")
@@ -47,9 +47,9 @@ def main():
     n_gpu = torch.cuda.device_count()
 
     ###
-    imgs_folder = '/data/brain-skull-stripped/rs/'
-    input_text_file = '/data/brain-skull-stripped/dataset/annotations.txt'
-    labels_file = '/data/brain-skull-stripped/dataset/brain-labels.csv'
+    imgs_folder = '/data/brain/rs-mhd-dataset/net_out_masks/'
+    input_text_file = '/data/brain/rs-mhd-dataset/annotations.txt'
+    labels_file = '/data/brain/rs-mhd-dataset/brain-labels.csv'
     bert_model = 'bert-base-uncased'
     ###
     data = BertFeaturesDataset(imgs_folder, input_text_file,
@@ -84,19 +84,14 @@ def main():
     print(f'UNet using {device}')
     # if torch.cuda.device_count() > 1:
     #     print(f"Using {n_gpu} CUDAs")
-    #     # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
-    #     model = nn.DataParallel(model)
-    # vgg.load_state_dict(torch.load('checkpoints/vgg20.pth'))
+    #     # dim = 0 [30, ...] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
+    #     lstm = nn.DataParallel(lstm)
 
-    optimizer = torch.optim.SGD(lstm.parameters(),
-                                lr=0.001, weight_decay=5e-2)
-    lambda2 = lambda epoch: 0.95 ** epoch
-    schedlr = torch.optim.lr_scheduler.LambdaLR(optimizer,
-                                                lr_lambda=[lambda2])
+    optimizer = torch.optim.SGD(lstm.parameters(), lr=0.001, weight_decay=5e-4)
+    # lambda2 = lambda epoch: 0.95 ** epoch
+    # schedlr = torch.optim.lr_scheduler.LambdaLR(optimizer,
+    #                                             lr_lambda=[lambda2])
 
-    # loss_func = nn.MSELoss()
-    # loss_func = nn.NLLLoss()
-    # softmax = nn.LogSoftmax(dim=1)
     loss_func = nn.CrossEntropyLoss()
 
     for epoch in range(args.epochs):
@@ -107,12 +102,11 @@ def main():
             labels = batch['label'].long().to(device).squeeze(1)
             images = batch['image'].to(device)
             embeddings = batch['embedding'].to(device)
-            # pred = model(embeddings, images)
             pred = lstm(embeddings)
             loss = loss_func(pred, labels)
             loss.backward()
-            plot_grad_flow(lstm.named_parameters(), epoch)
-            schedlr.step()
+            plot_grad_flow(lstm.named_parameters(), epoch, 'grad_flow_plots')
+            optimizer.step()
             train_loss += np.sqrt(loss.cpu().item())
         train_loss /= len(train_loader)
         if epoch % 1 == 0:
