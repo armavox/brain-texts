@@ -1,4 +1,5 @@
 from segmentation.model.zf_unet_224_model import ZF_UNET_224, DiceBCELoss, dice_coef_loss, dice_coef
+import segmentation.model.zf_unet_224_model as model_224
 from segmentation.train.TrainerUNET224 import TrainerUNET224
 from segmentation.utils.utils import data_generator, split_train_test_data
 from keras.optimizers import Adam
@@ -54,7 +55,10 @@ def main(opt):
 
     model = ZF_UNET_224()
     optimizer = Adam(lr=lr)
-    model.compile(optimizer=optimizer, loss=DiceBCELoss(dice_weight), metrics=[dice_coef])
+
+    model_224.WEIGHT_LOSS = dice_weight
+
+    model.compile(optimizer=optimizer, loss=DiceBCELoss, metrics=[dice_coef])
 
     train, val = split_train_test_data(path=data_path, validation_size=validation_size)
 
