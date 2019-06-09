@@ -30,7 +30,7 @@ class TrainerUNET224:
         os.makedirs(self.plots_path, exist_ok=True)
 
     def train_model(self):
-        track_checkpoints = ModelCheckpoint(os.path.join(self.checkpoint_path, "weights-{epoch:02d}.hdf5"),
+        track_checkpoints = ModelCheckpoint(os.path.join(self.checkpoint_path, "%sweights-{epoch:02d}.hdf5" % self.prefix),
                                             verbose=1, save_best_only=True, save_weights_only=True, mode="max",
                                             monitor=self.key_for_saving)
         H = self.model.fit_generator(generator=self.train_loader,

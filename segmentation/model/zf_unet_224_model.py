@@ -23,7 +23,7 @@ from keras.losses import binary_crossentropy
 import tensorflow as tf
 
 # Number of image channels (for example 3 in case of RGB, or 1 for grayscale images)
-INPUT_CHANNELS = 3
+INPUT_CHANNELS = 1
 # Number of output masks (1 in case you predict only one type of objects)
 OUTPUT_MASK_CHANNELS = 1
 # Pretrained weights
