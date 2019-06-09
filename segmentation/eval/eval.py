@@ -39,22 +39,30 @@ def get_orig_mask_filenames_from_patient_directory(patient_path):
 
         if "label" in lower_i:
             mask_filename = os.path.join(patient_path, i)
-        if "flair" in lower_i:
+        if "flair" in lower_i or 'kda' in lower_i:
             orig_filename = os.path.join(patient_path, i)
 
     return orig_filename, mask_filename
 
 def load_patient(general_path, patient_id):
     patient_path = os.path.join(general_path, patient_id)
+
     orig_filename, mask_filename = get_orig_mask_filenames_from_patient_directory(patient_path)
     # x = data_utils.stack_images(general_path, patient_id, False)
     # x = data_utils.load_mgh(general_path, patient_id)
     print(orig_filename, mask_filename)
+    # orig_filename = orig_filename.replace(' ', '\ ')
+    # mask_filename = mask_filename.replace(' ', '\ ')
+    print('F', orig_filename)
     x = DataReader.read_mhd(orig_filename)[0]
-    y = DataReader.read_mhd(mask_filename)[0]
-    plt.imshow(x[:, :, 100])
-    plt.show()
-    print(y.shape)
+    if 'norma' in orig_filename:
+        x = x.transpose(1, 2, 0)
+        print('NORMA')
+    if mask_filename:
+        y = DataReader.read_mhd(mask_filename)[0]
+    # plt.imshow(x[:, :, 100])
+    # plt.show()
+    # print(y.shape)
 
     shape = list(x.shape)
     shape[1] = shape[0] = 224
@@ -81,7 +89,7 @@ def main(opt):
     input_path = "/data/brain/rs-mhd-dataset"#opt.input
     weight_brain = "/home/armavox/pyprojects/brain-texts/segmentation/weights/weights-43.hdf5" #opt.weight_brain
     # weight_gliom = opt.weight_gliom
-    # output_path = opt.output
+    output_path = '/data/brain/rs-mhd-dataset/net_out_masks'
 
     patients_id = glob.glob1(input_path, "AR*")
 
@@ -91,7 +99,7 @@ def main(opt):
     for patient_id in patients_id:
         if patient_id == "AR-5":
             continue
-        patient_saving_path = os.path.join(input_path, patient_id, "%s_rs_mask.mhd" % patient_id)
+        patient_saving_path = os.path.join(output_path, "%s_rs_mask.mhd" % patient_id)
 
         x = load_patient(input_path, patient_id)
         x = brain_segm.predict(x)
