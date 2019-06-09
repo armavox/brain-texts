@@ -37,10 +37,11 @@ def preprocess_input(x):
     return x
 
 
-def flatten(y):
+def flatten(y, with_filter=False):
     y = K.flatten(y)
-    y = K.greater_equal(y, 0.5)
-    y = K.cast(y, K.floatx())
+    if with_filter:
+        y = K.greater_equal(y, 0.5)
+        y = K.cast(y, K.floatx())
 
     return y
 
@@ -48,7 +49,7 @@ def flatten(y):
 def dice_coef(y_true, y_pred):
     eps = 1e-15
 
-    y_true_f = flatten(y_true)
+    y_true_f = flatten(y_true, True)
     y_pred_f = flatten(y_pred)
 
     intersection = K.sum(y_true_f * y_pred_f)
@@ -58,7 +59,7 @@ def dice_coef(y_true, y_pred):
 def jacard_coef(y_true, y_pred):
     eps = 1e-15
 
-    y_true_f = flatten(y_true)
+    y_true_f = flatten(y_true, True)
     y_pred_f = flatten(y_pred)
 
     intersection = K.sum(y_true_f * y_pred_f)
@@ -66,7 +67,7 @@ def jacard_coef(y_true, y_pred):
 
 
 def JacardBCELoss(y_true, y_pred):
-    y_true = flatten(y_true)
+    y_true = flatten(y_true, True)
     y_pred = flatten(y_pred)
 
     loss = (1 - WEIGHT_LOSS) * binary_crossentropy(y_true, y_pred)
@@ -78,7 +79,7 @@ def JacardBCELoss(y_true, y_pred):
 
 
 def DiceBCELoss(y_true, y_pred):
-    y_true = flatten(y_true)
+    y_true = flatten(y_true, True)
     y_pred = flatten(y_pred)
 
     loss = (1 - WEIGHT_LOSS) * binary_crossentropy(y_true, y_pred)
