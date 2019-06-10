@@ -10,7 +10,7 @@ class ARDataset(Dataset):
         filepath = self.files_path[index]
         data = np.load(filepath)
 
-        return data[0], data[1]
+        return data[0][np.newaxis, ...], data[1][np.newaxis, ...]
 
     def __len__(self):
         return len(self.files_path)
