@@ -90,7 +90,7 @@ class TrainerTorchUNET224:
                 acc = self.metric(output, target)
                 global_acc += acc.item()
 
-        return loss / num_iter, acc / num_iter
+        return global_loss / num_iter, global_acc / num_iter
 
     def draw_plots(self, loss_train, loss_val, acc_val):
 
