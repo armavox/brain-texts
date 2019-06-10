@@ -10,7 +10,9 @@ def jaccard_metric(y_pred, y_true):
     intersection = (jaccard_target * jaccard_output).sum()
     union = jaccard_target.sum() + jaccard_output.sum()
 
-    return (intersection + eps) / (union - intersection + eps)
+    result = (intersection + eps) / (union - intersection + eps)
+    print("jaccard: ", result)
+    return result
 
 
 class JaccardBCELoss:
