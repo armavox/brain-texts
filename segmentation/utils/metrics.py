@@ -22,8 +22,11 @@ class JaccardBCELoss:
         y_pred = torch.sigmoid(outputs).view(-1).float()
 
         loss = (1 - self.jaccard_weight) * self.bce(y_pred, y_true)
+        print("loss: ", loss.item())
 
         if self.jaccard_weight:
-            loss -= self.jaccard_weight * torch.log(jaccard_metric(y_pred, y_true))
+            jaccard = self.jaccard_weight * torch.log(jaccard_metric(y_pred, y_true))
+            print("log jaccard: ", jaccard.item())
+            loss -= jaccard
 
         return loss
