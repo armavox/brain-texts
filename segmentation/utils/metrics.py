@@ -25,8 +25,10 @@ class JaccardBCELoss:
         print("loss: ", loss.item())
 
         if self.jaccard_weight:
-            jaccard = self.jaccard_weight * torch.log(jaccard_metric(y_pred, y_true))
+            jaccard_met = jaccard_metric(y_pred, y_true)
+            jaccard = self.jaccard_weight * torch.log(jaccard_met)
             print("log jaccard: ", jaccard.item())
             loss -= jaccard
 
-        return loss
+
+        return loss, jaccard_met.item()
