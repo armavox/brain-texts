@@ -57,7 +57,7 @@ def main(opt):
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    trainer = TrainerTorchUNET224(model, train_loader, val_loader, checkpoint_path, metric, criterion, optimizer, prefix, device, epochs)
+    trainer = TrainerTorchUNET224(model, train_loader, val_loader, checkpoint_path, criterion, optimizer, prefix, device, epochs)
     trainer.train_model()
 
 
