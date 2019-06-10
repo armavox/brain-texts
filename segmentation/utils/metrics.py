@@ -11,7 +11,7 @@ def jaccard_metric(y_pred, y_true):
     union = jaccard_target.sum() + jaccard_output.sum()
 
     result = (intersection + eps) / (union - intersection + eps)
-    print("jaccard: ", result)
+    print("jaccard: ", result.item())
     return result
 
 
