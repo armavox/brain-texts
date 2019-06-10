@@ -53,11 +53,11 @@ def main(opt):
     val_loader = DataLoader(val_dataset, batch_size=batch_size)
 
     prefix = "lr=%s_bs=%s_dice=%s" % (lr, batch_size, dice_weight)
-    optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    trainer = TrainerTorchUNET224(model, train_loader, val_loader, checkpoint_path, metric, criterion, optim, prefix, device, epochs)
+    trainer = TrainerTorchUNET224(model, train_loader, val_loader, checkpoint_path, metric, criterion, optimizer, prefix, device, epochs)
     trainer.train_model()
 
 

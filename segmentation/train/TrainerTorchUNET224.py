@@ -44,7 +44,7 @@ class TrainerTorchUNET224:
 
             epoch_loss = 0
 
-            for i, (x, target) in enumerate(self.train_loader):
+            for j, (x, target) in enumerate(self.train_loader):
                 x, target = x.to(self.device).float(), target.to(self.device).float()
 
                 output = self.model(x)
@@ -59,6 +59,9 @@ class TrainerTorchUNET224:
             val_loss, val_acc = self.validate_model()
             loss_val.append(val_loss)
             acc_val.append(val_acc)
+
+            print('Train Epoch: {} train_loss: {:.8f} val_loss: {:.8f} jaccard: {:.8f}'.format(
+                    i, epoch_loss / len(self.train_loader), val_loss, val_acc))
 
             torch.save(self.model, os.path.join(self.checkpoint_path, "%s_batch_%s.pt" % (self.prefix, i)))
 
