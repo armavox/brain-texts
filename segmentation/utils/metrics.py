@@ -3,12 +3,9 @@ from torch import nn
 
 
 def jaccard_metric(y_pred, y_true):
-    jaccard_target = (y_true > 0).view(-1).float()
-    jaccard_output = torch.sigmoid(y_pred).view(-1).float()
-
     eps = 1e-15
-    intersection = (jaccard_target * jaccard_output).sum()
-    union = jaccard_target.sum() + jaccard_output.sum()
+    intersection = (y_true * y_pred).sum()
+    union = y_true.sum() + y_pred.sum()
 
     result = (intersection + eps) / (union - intersection + eps)
     print("jaccard: ", result.item())
@@ -17,13 +14,16 @@ def jaccard_metric(y_pred, y_true):
 
 class JaccardBCELoss:
     def __init__(self, jaccard_weight):
-        self.bce = nn.BCEWithLogitsLoss()
+        self.bce = nn.BCELoss()
         self.jaccard_weight = jaccard_weight
 
     def __call__(self, outputs, targets):
-        loss = (1 - self.jaccard_weight) * self.bce(outputs, targets)
+        y_true = (targets > 0).view(-1).float()
+        y_pred = torch.sigmoid(outputs).view(-1).float()
+
+        loss = (1 - self.jaccard_weight) * self.bce(y_pred, y_true)
 
         if self.jaccard_weight:
-            loss -= self.jaccard_weight * torch.log(jaccard_metric(outputs, targets))
+            loss -= self.jaccard_weight * torch.log(jaccard_metric(y_pred, y_true))
 
         return loss
