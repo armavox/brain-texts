@@ -45,7 +45,7 @@ class TrainerTorchUNET224:
             epoch_loss = 0
 
             for i, (x, target) in enumerate(self.train_loader):
-                x, target = x.to(self.device), target.to(self.device)
+                x, target = x.to(self.device).float(), target.to(self.device).float()
 
                 output = self.model(x)
                 loss = self.criterion(output, target)
@@ -73,7 +73,7 @@ class TrainerTorchUNET224:
             global_acc = 0
 
             for i, (x, target) in enumerate(self.val_loader):
-                x, target = x.to(self.device), target.to(self.device)
+                x, target = x.to(self.device).float(), target.to(self.device).float()
 
                 output = self.model(x)
 
