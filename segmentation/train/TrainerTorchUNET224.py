@@ -46,7 +46,9 @@ class TrainerTorchUNET224:
             epoch_loss = 0
 
             for j, (x, target) in enumerate(self.train_loader):
-                x, target = x.to(self.device).float(), target.to(self.device).float()
+                x = x.to(self.device).float()
+                with torch.no_grad():
+                    target = target.to(self.device).float()
 
                 output = self.model(x)
                 loss = self.criterion(output, target)
