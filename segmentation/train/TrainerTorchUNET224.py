@@ -2,8 +2,9 @@ import torch
 import torch.nn as nn
 import os
 import matplotlib.pyplot as plt
-import datetime
+from datetime import datetime
 import numpy as np
+
 
 class TrainerTorchUNET224:
     def __init__(self, model, train_loader, val_loader, checkpoint_path, metric, criterion, optimizer, prefix, device='cpu',
@@ -88,14 +89,6 @@ class TrainerTorchUNET224:
                 global_acc += acc.item()
 
         return loss / num_iter, acc / num_iter
-
-
-
-
-
-
-
-
 
     def draw_plots(self, loss_train, loss_val, acc_val):
 

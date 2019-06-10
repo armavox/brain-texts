@@ -22,6 +22,6 @@ class JaccardBCELoss:
         loss = (1 - self.jaccard_weight) * self.bce(outputs, targets)
 
         if self.jaccard_weight:
-            loss -= jaccard_metric(outputs, targets)
+            loss -= self.jaccard_weight * torch.log(jaccard_metric(outputs, targets))
 
         return loss
