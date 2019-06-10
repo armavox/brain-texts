@@ -3,8 +3,8 @@ from torch import nn
 
 
 def jaccard_metric(y_pred, y_true):
-    jaccard_target = (y_true > 0).float()
-    jaccard_output = torch.sigmoid(y_pred)
+    jaccard_target = (y_true > 0).view(-1).float()
+    jaccard_output = torch.sigmoid(y_pred).view(-1).float()
 
     eps = 1e-15
     intersection = (jaccard_target * jaccard_output).sum()
