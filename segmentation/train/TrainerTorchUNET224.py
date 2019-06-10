@@ -45,6 +45,7 @@ class TrainerTorchUNET224:
             epoch_loss = 0
 
             for i, (x, target) in enumerate(self.train_loader):
+                x, target = x.to(self.device), target.to(self.device)
 
                 output = self.model(x)
                 loss = self.criterion(output, target)
@@ -61,7 +62,6 @@ class TrainerTorchUNET224:
 
             torch.save(self.model, os.path.join(self.checkpoint_path, "%s_batch_%s.pt" % (self.prefix, i)))
 
-
         self.draw_plots(loss_train, loss_val, acc_val)
 
     def validate_model(self):
@@ -73,6 +73,8 @@ class TrainerTorchUNET224:
             global_acc = 0
 
             for i, (x, target) in enumerate(self.val_loader):
+                x, target = x.to(self.device), target.to(self.device)
+
                 output = self.model(x)
 
                 loss = self.criterion(output, target)
