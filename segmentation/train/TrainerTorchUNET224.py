@@ -49,6 +49,7 @@ class TrainerTorchUNET224:
 
                 output = self.model(x)
                 loss = self.criterion(output, target)
+                print('Train Epoch: {}. Batch: {}/{} train_loss: {:.8f}'.format(i, j, len(self.train_loader), loss.item()))
                 epoch_loss += loss.item()
                 loss.backward()
                 self.optimizer.step()
