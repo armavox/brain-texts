@@ -61,8 +61,8 @@ class TestNet:
         with torch.no_grad():
             for i in xs:
                 i = torch.from_numpy(i)
-                i = i.to(self.device).float()
-                pred = self.model(i)
+                idev = i.to(self.device).float()
+                pred = self.model(idev)
                 pred = torch.sigmoid(pred)
 
                 pred = np.array(pred.cpu())
@@ -70,5 +70,7 @@ class TestNet:
                 pred *= 255
 
                 preds.extend(pred)
+
+                del idev
 
         return self.apply_mask(x, np.array(preds))
