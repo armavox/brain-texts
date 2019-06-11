@@ -7,6 +7,11 @@ import torch.nn as nn
 
 import matplotlib.pyplot as plt
 
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
 class TestNet:
     def __init__(self, weight_path, tester_name, need_fix_mask, device):
         self.weight_path = weight_path
@@ -51,7 +56,7 @@ class TestNet:
 
     def predict(self, x):
         preds = []
-        xs = np.array_split(x, 10)
+        xs = list(chunks(x, 50))
         print(self.tester_name, " is working")
         with torch.no_grad():
             for i in xs:
