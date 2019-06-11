@@ -6,11 +6,11 @@ if not sys.warnoptions:
 
 from segmentation.eval.TestNet import TestNet
 import argparse
-import data_utils
-import cv2
 import glob
 import numpy as np
 import os
+
+import torch
 
 
 from segmentation.utils.DataReader import DataReader
@@ -44,15 +44,13 @@ def get_orig_mask_filenames_from_patient_directory(patient_path):
 
     return orig_filename, mask_filename
 
+
 def load_patient(general_path, patient_id):
     patient_path = os.path.join(general_path, patient_id)
 
     orig_filename, mask_filename = get_orig_mask_filenames_from_patient_directory(patient_path)
-    # x = data_utils.stack_images(general_path, patient_id, False)
-    # x = data_utils.load_mgh(general_path, patient_id)
-    print(orig_filename, mask_filename)
-    # orig_filename = orig_filename.replace(' ', '\ ')
-    # mask_filename = mask_filename.replace(' ', '\ ')
+
+
     print('F', orig_filename)
     x = DataReader.read_mhd(orig_filename)[0]
     if 'norma' in orig_filename:
@@ -60,15 +58,11 @@ def load_patient(general_path, patient_id):
         print('NORMA')
     if mask_filename:
         y = DataReader.read_mhd(mask_filename)[0]
-    # plt.imshow(x[:, :, 100])
-    # plt.show()
-    # print(y.shape)
 
     shape = list(x.shape)
-    shape[1] = shape[0] = 224
 
     if len(x.shape) == 3:
-        xx = np.empty((shape[2], shape[1], shape[0], 3), dtype = np.uint8)
+        xx = np.empty((shape[2], 1, shape[1], shape[0]), dtype = np.uint8)
         for i in range(shape[2]):
             img = x[:, :, i].copy()
             mi = img.min()
@@ -76,39 +70,35 @@ def load_patient(general_path, patient_id):
                 img = (((img - mi) / img.max()) * 255).astype(np.uint8)
             else:
                 img = ((img / img.max()) * 255).astype(np.uint8)
-            img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-            img = cv2.resize(img, (224, 224))
+            img = np.array([img])
+            img = img[np.newaxis, ...]
             xx[i,...] = img
         x = xx
 
     return x
 
-import matplotlib.pyplot as plt
 
 def main(opt):
     input_path = "/data/brain/rs-mhd-dataset"#opt.input
-    weight_brain = "/home/armavox/pyprojects/brain-texts/segmentation/weights/weights-43.hdf5" #opt.weight_brain
+    weight_brain = "/data/brain/rs-mhd-dataset/checkpoints/lr=0.0001_bs=8_dice=0.8_batch_10.pt" #opt.weight_brain
     # weight_gliom = opt.weight_gliom
-    output_path = '/data/brain/rs-mhd-dataset/net_out_masks'
+    output_path = '/data/brain/rs-mhd-dataset/net_out_masks_torch'
 
     patients_id = glob.glob1(input_path, "AR*")
-
-    brain_segm = TestNet(weight_brain, "Brain segmentation", True)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    brain_segm = TestNet(weight_brain, "Brain segmentation", True, device)
     # gliom_segm = TestNet(weight_gliom, "Gliomas segmentation", False)
 
     for patient_id in patients_id:
-        if patient_id == "AR-5":
+        if patient_id in ["AR-5"]:
             continue
+
         patient_saving_path = os.path.join(output_path, "%s_rs_mask.mhd" % patient_id)
 
         x = load_patient(input_path, patient_id)
         x = brain_segm.predict(x)
         sitk.WriteImage(sitk.GetImageFromArray(x), patient_saving_path)
 
-        # np.save(os.path.join(output_path, "brain_%s.npy" % patient_id), x)
-        # x = gliom_segm.predict(x)
-
-        # np.save(patient_saving_path, x)
         print("Patient's gliomas saved to: ", patient_saving_path)
 
 
