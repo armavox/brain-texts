@@ -21,9 +21,9 @@ class TestNet:
     def __setting_model(self):
         self.model.load_state_dict(torch.load(self.weight_path, map_location=self.device).module.state_dict())
         if torch.cuda.is_available():
-            # if torch.cuda.device_count() > 1:
-            #     print(f'{torch.cuda.device_count()} GPUs used')
-            #     self.model = nn.DataParallel(self.model)
+            if torch.cuda.device_count() > 1:
+                print(f'{torch.cuda.device_count()} GPUs used')
+                self.model = nn.DataParallel(self.model)
             self.model = self.model.to(self.device)
         self.model.eval()
 
