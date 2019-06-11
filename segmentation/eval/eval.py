@@ -80,7 +80,7 @@ def load_patient(general_path, patient_id):
 
 def main(opt):
     input_path = "/data/brain/rs-mhd-dataset"#opt.input
-    weight_brain = "/data/brain/rs-mhd-dataset/checkpoints/lr=0.0001_bs=8_dice=0.8_batch_10.pt" #opt.weight_brain
+    weight_brain = "/data/brain/checkpoints/lr=0.0001_bs=8_dice=0.8_batch_10.pt" #opt.weight_brain
     # weight_gliom = opt.weight_gliom
     output_path = '/data/brain/rs-mhd-dataset/net_out_masks_torch'
 
