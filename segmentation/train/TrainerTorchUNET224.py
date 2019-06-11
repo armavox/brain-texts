@@ -113,7 +113,7 @@ class TrainerTorchUNET224:
         plt.plot(np.arange(1, self.epochs + 1), acc_val, color='blue', label="train_metric")
         plt.title("Metric")
         plt.xlabel("Epoch #")
-        plt.ylabel("Accuracy")
+        plt.ylabel("Jaccard index")
         plt.legend(loc="upper right")
         plt.savefig( os.path.join(self.plots_path, "%s_metric_%s.png" % (self.prefix, time_str)))
         plt.close()
