@@ -50,14 +50,20 @@ class TestNet:
         return np.array(result)
 
     def predict(self, x):
+        preds = []
+        xs = np.split(x, 5)
         print(self.tester_name, " is working")
         with torch.no_grad():
-            xs = torch.from_numpy(x)
-            xs = xs.to(self.device).float()
-            pred = self.model(xs)
-            pred = torch.sigmoid(pred)
-        pred = np.array(pred.cpu())
-        pred = (pred > 0.3).astype(np.uint8)
-        pred *= 255
+            for i in xs:
+                i = torch.from_numpy(i)
+                i = i.to(self.device).float()
+                pred = self.model(i)
+                pred = torch.sigmoid(pred)
 
-        return self.apply_mask(x, pred)
+                pred = np.array(pred.cpu())
+                pred = (pred > 0.3).astype(np.uint8)
+                pred *= 255
+
+                preds.extend(pred)
+
+        return self.apply_mask(x, np.array(preds))
