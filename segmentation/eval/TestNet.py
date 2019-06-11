@@ -51,7 +51,7 @@ class TestNet:
 
     def predict(self, x):
         preds = []
-        xs = np.split(x, 5)
+        xs = np.array_split(x, 5)
         print(self.tester_name, " is working")
         with torch.no_grad():
             for i in xs:
