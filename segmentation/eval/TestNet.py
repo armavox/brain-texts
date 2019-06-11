@@ -56,7 +56,7 @@ class TestNet:
             xs = xs.to(self.device).float()
             pred = self.model(xs)
             pred = torch.sigmoid(pred)
-        pred = np.array(pred)
+        pred = np.array(pred.cpu())
         pred = (pred > 0.3).astype(np.uint8)
         pred *= 255
 
