@@ -56,7 +56,7 @@ class TestNet:
 
     def predict(self, x):
         preds = []
-        xs = list(chunks(x, 50))
+        xs = list(chunks(x, 15))
         print(self.tester_name, " is working")
         with torch.no_grad():
             for i in xs:
