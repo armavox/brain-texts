@@ -62,7 +62,7 @@ def load_patient(general_path, patient_id):
     shape = list(x.shape)
 
     if len(x.shape) == 3:
-        xx = np.empty((shape[2], 1, shape[1], shape[0]), dtype = np.uint8)
+        xx = np.empty((shape[2], 1, shape[0], shape[1]), dtype = np.uint8)
         for i in range(shape[2]):
             img = x[:, :, i].copy()
             mi = img.min()
