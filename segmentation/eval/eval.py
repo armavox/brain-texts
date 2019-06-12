@@ -1,20 +1,18 @@
-import warnings
-import sys
-
-if not sys.warnoptions:
-    warnings.simplefilter("ignore")
-
-from segmentation.eval.TestNet import TestNet
-import argparse
-import glob
-import numpy as np
 import os
+import sys
+import glob
+import argparse
+import numpy as np
+import SimpleITK as sitk
 
 import torch
 
-
 from segmentation.utils.DataReader import DataReader
-import SimpleITK as sitk
+from segmentation.eval.TestNet import TestNet
+
+import warnings
+if not sys.warnoptions:
+    warnings.simplefilter("ignore")
 
 
 def arguments():
@@ -50,7 +48,6 @@ def load_patient(general_path, patient_id):
 
     orig_filename, mask_filename = get_orig_mask_filenames_from_patient_directory(patient_path)
 
-
     print('F', orig_filename)
     x = DataReader.read_mhd(orig_filename)[0]
     if 'norma' in orig_filename:
@@ -62,7 +59,7 @@ def load_patient(general_path, patient_id):
     shape = list(x.shape)
 
     if len(x.shape) == 3:
-        xx = np.empty((shape[2], 1, shape[0], shape[1]), dtype = np.uint8)
+        xx = np.empty((shape[2], 1, shape[0], shape[1]), dtype=np.uint8)
         for i in range(shape[2]):
             img = x[:, :, i].copy()
             mi = img.min()
@@ -72,17 +69,18 @@ def load_patient(general_path, patient_id):
                 img = ((img / img.max()) * 255).astype(np.uint8)
             img = np.array([img])
             img = img[np.newaxis, ...]
-            xx[i,...] = img
+            xx[i, ...] = img
         x = xx
 
     return x
 
 
 def main(opt):
-    input_path = "/data/brain/rs-mhd-dataset"#opt.input
-    weight_brain = "/data/brain/checkpoints/lr=0.0001_bs=8_dice=0.8_batch_10.pt" #opt.weight_brain
+    input_path = "/data/brain/rs-mhd-dataset"  # opt.input
+    # opt.weight_brain
+    weight_brain = "/data/brain/checkpoints/lr=0.0001_bs=8_dice=0.8_batch_91.pt"
     # weight_gliom = opt.weight_gliom
-    output_path = '/data/brain/rs-mhd-dataset/net_out_masks_torch'
+    output_path = '/data/brain/rs-mhd-dataset/net_out_masks_torch_2'
 
     patients_id = glob.glob1(input_path, "AR*")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -93,7 +91,8 @@ def main(opt):
         if patient_id in ["AR-5"]:
             continue
 
-        patient_saving_path = os.path.join(output_path, "%s_rs_mask.mhd" % patient_id)
+        patient_saving_path = os.path.join(output_path,
+                                           "%s_rs_mask.mhd" % patient_id)
 
         x = load_patient(input_path, patient_id)
         x = brain_segm.predict(x)
