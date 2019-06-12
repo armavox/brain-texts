@@ -42,7 +42,6 @@ class TestNet:
         for i in range(len(origs)):
             mask = masks[i, 0, :, :].copy()
             mask = mask.astype(np.uint8)
-            print(mask.shape)
             # if self.need_fix_mask:
             #     mask = fixmask(mask)
 

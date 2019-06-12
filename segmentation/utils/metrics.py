@@ -30,5 +30,4 @@ class JaccardBCELoss:
             print("log jaccard: ", jaccard.item())
             loss -= jaccard
 
-
         return loss, jaccard_met.item()

@@ -106,14 +106,13 @@ class BertFeaturesDataset(Dataset):
 
     def __getitem__(self, idx):
         name = self.names[idx] + '_rs_mask.mhd'
-        # img = stack_images(self.imgs_folder, name, True)
+
         img_path = os.path.join(self.imgs_folder, name)
-        img = read_mhd(img_path)[0][..., 0]
+        img = read_mhd(img_path)[0]
 
         # img = np.load(img_path)[...,0]
         img = skimage.transform.resize(img, (self.rsz, self.rsz, self.rsz),
                                        preserve_range=True)
-        # img = img.astype(np.uint8)
 
         img = img / 255
         img_tensor = torch.tensor(img, dtype=torch.float)
@@ -435,9 +434,9 @@ if __name__ == "__main__":
     parser.add_argument('--input-text-file', type=str)
     args = parser.parse_args()
 
-    imgs_folder = args.imgs_folder or '/data/brain-skull-stripped/rs/'
-    labels_file = args.labels_file or '/data/brain-skull-stripped/dataset/brain-labels.csv'
-    input_text_file = args.input_text_file or '/data/brain-skull-stripped/dataset/annotations.txt'
+    imgs_folder = args.imgs_folder or '/data/rs-mhd-dataset/net_out_masks/'
+    labels_file = args.labels_file or '/data/rs-mhd-dataset/brain-labels.csv'
+    input_text_file = args.input_text_file or '/data/rs-mhd-dataset/annotations.txt'
     bert_model = 'bert-base-uncased'
     data = BertFeaturesDataset(imgs_folder, input_text_file, labels_file,
                                bert_model, max_seq_length=256, batch_size=4,
