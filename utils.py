@@ -55,9 +55,9 @@ def draw_plots(epochs, plots_path, prefix,
         plt.style.use("ggplot")
         plt.figure()
         plt.plot(np.arange(1, epochs + 1), loss_train,
-                 color='blue', label="train_loss")
+                 color='blue', label="Train")
         plt.plot(np.arange(1, epochs + 1), loss_val,
-                 color='red', label="test_loss")
+                 color='red', label="Validation")
         plt.title("Training Loss")
         plt.xlabel("Epoch #")
         plt.ylabel("Loss")
@@ -70,7 +70,7 @@ def draw_plots(epochs, plots_path, prefix,
         plt.style.use("ggplot")
         plt.figure()
         plt.plot(np.arange(1, epochs + 1), acc_val,
-                 color='red', label="test_metric")
+                 color='red', label="Validation")
         plt.title("Metric")
         plt.xlabel("Epoch #")
         plt.ylabel("Jaccard index")

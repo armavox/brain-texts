@@ -35,7 +35,7 @@ def main():
                         help="Epochs to train. Default: 3")
     parser.add_argument("-lr", "--lr", type=float, default=0.001,
                         help="Learning rate. Default: 0.001")
-    parser.add_argument("--batch-size", default=4, type=int,
+    parser.add_argument("-b", "--batch-size", default=4, type=int,
                         help="Batch size for predictions. Default: 4")
     parser.add_argument('--max-seq-length', default=256, type=int,
                         help="Seq size for texts embeddings. Default: 256")
@@ -62,10 +62,12 @@ def main():
                                bert_device='cpu',
                                resize_to=64)
     
-    np.random.seed(0)  # TODO: saving indices for test phase
+    np.random.seed(5)  # TODO: saving indices for test phase
     train_inds, val_inds, test_inds = train_val_holdout_split(
-        data, ratios=[0.6, 0.4, 0]
+        data, ratios=[0.7, 0.3, 0]
     )
+    train_inds = [10,  6, 18, 16, 11,  9,  4,  8,  2, 17,  7, 12,  5,  0,  1] 
+    val_inds = [15, 13,  3, 14]
     print('INDS', train_inds, val_inds, test_inds)
     train_sampler = SubsetRandomSampler(train_inds)
     val_sampler = SubsetRandomSampler(val_inds)
@@ -83,8 +85,8 @@ def main():
     #                  context_size=2, combine_dim=2, dropout=0)
     # lstm = lstm.to(dev)
 
-    # model = EarlyFusion(combine_dim=4096)
-    model = VGG11(combine_dim=2)
+    model = EarlyFusion(combine_dim=4096)
+    # model = VGG11(combine_dim=2)
     model = model.to(dev)
 
     model_name = utils.get_model_name(model)
@@ -95,10 +97,8 @@ def main():
     #     # dim = 0 [30, ...] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
     #     lstm = nn.DataParallel(lstm)
 
-    opt = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=5e-2)
-    # lambda2 = lambda epoch: 0.95 ** epoch
-    # schedlr = torch.optim.lr_scheduler.LambdaLR(opt,
-    #                                             lr_lambda=[lambda2])
+    opt = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-2)
+    schedlr = torch.optim.lr_scheduler.ExponentialLR(opt, 0.999)
 
     loss_func = nn.CrossEntropyLoss()
 
@@ -115,16 +115,20 @@ def main():
             images = batch['image'].to(dev)
             embeddings = batch['embedding'].to(dev)
 
-            # out = vgg(images)
-            # pred = lstm(embeddings)
-            out = model(images)  # embeddings, 
+            out = model(embeddings, images)  # embeddings, 
 
             loss = loss_func(out, labels)
+            # l1_reg = torch.tensor(0.).to(dev)
+            # l2_reg = torch.tensor(0.).to(dev)
+            # for param in model.parameters():
+            #     l1_reg += torch.norm(param, p=1)
+            #     l2_reg += torch.norm(param)
+            # loss += 1e-1 * l2_reg + 1e-1 * l1_reg
             loss.backward()
 
             utils.plot_grad_flow(model.named_parameters(),
                                  epoch, 'grad_flow_plots')
-            train_loss += np.sqrt(loss.cpu().item())
+            train_loss += loss.cpu().item()# - 1e-1 * l2_reg.cpu().item() - 1e-1 * l1_reg.cpu().item()
 
             opt.step()
             opt.zero_grad()
@@ -146,7 +150,7 @@ def main():
                     images = batch['image'].to(dev)
                     embeddings = batch['embedding'].to(dev)
 
-                    pred = model(images)  # embeddings, 
+                    pred = model(embeddings, images)  # embeddings, 
 
                     val_loss += loss_func(pred, labels)
                     pred = pred.data.max(1)[1]
@@ -164,6 +168,8 @@ def main():
                     model.state_dict(),
                     f'/data/brain/checkpoints/{prefix}_ep_{epoch}.pth'
                 )
+
+        schedlr.step()
 
     plots_path = 'train_plots'
     utils.draw_plots(args.epochs, plots_path, prefix,

@@ -11,7 +11,7 @@ class EarlyFusion(nn.Module):
     def __init__(self, combine_dim):
         super().__init__()
         self.vgg = VGG11(combine_dim=combine_dim)
-        self.lstm = BrainLSTM(embed_dim=768, hidden_dim=256, num_layers=1,
+        self.lstm = BrainLSTM(embed_dim=768, hidden_dim=1024, num_layers=2,
                               context_size=2, combine_dim=combine_dim,
                               dropout=0)
 
