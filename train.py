@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, SequentialSampler, SubsetRandomSampler
 from torch.utils.data import Subset
 
-from utils import plot_grad_flow
+import utils
 from data_utils import BertFeaturesDataset, train_val_holdout_split
 from models.unet import UNet
 from models.vgg import VGG, VGG11
@@ -32,22 +32,24 @@ def main():
 
     # Other parameters
     parser.add_argument("-e", "--epochs", default=3, type=int,
-                        help="Batch size for predictions.")
+                        help="Epochs to train. Default: 3")
+    parser.add_argument("-lr", "--lr", type=float, default=0.001,
+                        help="Learning rate. Default: 0.001")
     parser.add_argument("--batch-size", default=4, type=int,
-                        help="Batch size for predictions.")
+                        help="Batch size for predictions. Default: 4")
     parser.add_argument('--max-seq-length', default=256, type=int,
-                        help="Seq size for texts embeddings.")
+                        help="Seq size for texts embeddings. Default: 256")
     parser.add_argument('--no-cuda', action='store_true')
 
     args = parser.parse_args()
 
-    device = torch.device(
+    dev = torch.device(
         "cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu"
     )
     n_gpu = torch.cuda.device_count()
 
     ###
-    imgs_folder = '/data/brain/rs-mhd-dataset/net_out_masks/'
+    imgs_folder = '/data/brain/rs-mhd-dataset/net_out_masks_torch/'
     input_text_file = '/data/brain/rs-mhd-dataset/annotations.txt'
     labels_file = '/data/brain/rs-mhd-dataset/brain-labels.csv'
     bert_model = 'bert-base-uncased'
@@ -76,15 +78,18 @@ def main():
     test_loader = DataLoader(test_sampler)
 
     # vgg = VGG11(combine_dim=2)
-    # vgg = vgg.to(device)
+    # vgg = vgg.to(dev)
     # lstm = BrainLSTM(embed_dim=768, hidden_dim=256, num_layers=1,
     #                  context_size=2, combine_dim=2, dropout=0)
-    # lstm = lstm.to(device)
+    # lstm = lstm.to(dev)
 
-    model = EarlyFusion(combine_dim=4096)
-    model = model.to(device)
+    # model = EarlyFusion(combine_dim=4096)
+    model = VGG11(combine_dim=2)
+    model = model.to(dev)
 
-    print(f'UNet using {device}')
+    model_name = utils.get_model_name(model)
+    prefix = "%s_lr=%s_bs=%s" % (model_name, args.lr, args.batch_size)
+
     # if torch.cuda.device_count() > 1:
     #     print(f"Using {n_gpu} CUDAs")
     #     # dim = 0 [30, ...] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
@@ -98,45 +103,50 @@ def main():
     loss_func = nn.CrossEntropyLoss()
 
     # TRAINING
+    print(f'\n===== BEGIN TRAINING {model_name} WITH {str(dev).upper()} =====')
+    loss_train = []
+    loss_val, acc_val = [], []
     for epoch in range(args.epochs):
         model.train()
         train_loss = 0
         for batch in train_loader:
 
-            labels = batch['label'].long().to(device).squeeze(1)
-            images = batch['image'].to(device)
-            embeddings = batch['embedding'].to(device)
+            labels = batch['label'].long().to(dev).squeeze(1)
+            images = batch['image'].to(dev)
+            embeddings = batch['embedding'].to(dev)
 
             # out = vgg(images)
             # pred = lstm(embeddings)
-            out = model(embeddings, images)
+            out = model(images)  # embeddings, 
 
             loss = loss_func(out, labels)
             loss.backward()
 
-            plot_grad_flow(model.named_parameters(), epoch, 'grad_flow_plots')
+            utils.plot_grad_flow(model.named_parameters(),
+                                 epoch, 'grad_flow_plots')
             train_loss += np.sqrt(loss.cpu().item())
 
             opt.step()
             opt.zero_grad()
 
         train_loss /= len(train_loader)
+        loss_train.append(train_loss)
         if epoch % 1 == 0:
-            print('Epoch: %04d Train loss: %.4f' % (epoch, train_loss))
+            print('Epoch: %03d Train loss: %.4f' % (epoch, train_loss))
 
         # VALIDATION
-        if epoch % 10 == 0:
+        if epoch % 1 == 0:
             model.eval()
             val_loss = 0
             correct, total = 0, 0
             with torch.no_grad():
                 for batch in val_loader:
-                    
-                    labels = batch['label'].long().to(device).squeeze(1)
-                    images = batch['image'].to(device)
-                    embeddings = batch['embedding'].to(device)
 
-                    pred = model(embeddings, images)
+                    labels = batch['label'].long().to(dev).squeeze(1)
+                    images = batch['image'].to(dev)
+                    embeddings = batch['embedding'].to(dev)
+
+                    pred = model(images)  # embeddings, 
 
                     val_loss += loss_func(pred, labels)
                     pred = pred.data.max(1)[1]
@@ -144,9 +154,20 @@ def main():
                     total += labels.size(0)
 
                 val_loss /= len(val_loader)
+                loss_val.append(val_loss)
                 acc = 100. * correct / total
-                print('Valid loss: %.4f Acc: %.2f' % (val_loss.item(), acc))
-                torch.save(model.state_dict(), f'checkpoints/fuse{epoch}.pth')
+                acc_val.append(acc)
+
+                print('Epoch: %03d Valid loss: %.4f Acc: %.2f' % (epoch, val_loss.item(), acc))
+
+                torch.save(
+                    model.state_dict(),
+                    f'/data/brain/checkpoints/{prefix}_ep_{epoch}.pth'
+                )
+
+    plots_path = 'train_plots'
+    utils.draw_plots(args.epochs, plots_path, prefix,
+                     loss_train, loss_val, acc_val)
 
 
 if __name__ == "__main__":

@@ -152,7 +152,7 @@ class BertFeaturesDataset(Dataset):
 
     def get_bert_embeddings(self, tensor_dataset, bert_model, batch_size,
                             bert_device):
-        print(f'BERT using {bert_device}')
+        print(f'BERT using {str(bert_device).upper()}')
         model = BertModel.from_pretrained(bert_model)
         model.to(bert_device)
 
@@ -434,15 +434,19 @@ if __name__ == "__main__":
     parser.add_argument('--input-text-file', type=str)
     args = parser.parse_args()
 
-    imgs_folder = args.imgs_folder or '/data/rs-mhd-dataset/net_out_masks/'
-    labels_file = args.labels_file or '/data/rs-mhd-dataset/brain-labels.csv'
-    input_text_file = args.input_text_file or '/data/rs-mhd-dataset/annotations.txt'
+    imgs_folder = args.imgs_folder or '/data/brain/rs-mhd-dataset/net_out_masks_torch/'
+    labels_file = args.labels_file or '/data/brain/rs-mhd-dataset/brain-labels.csv'
+    input_text_file = args.input_text_file or '/data/brain/rs-mhd-dataset/annotations.txt'
     bert_model = 'bert-base-uncased'
     data = BertFeaturesDataset(imgs_folder, input_text_file, labels_file,
                                bert_model, max_seq_length=256, batch_size=4,
                                bert_device='cpu')
+    dl = DataLoader(data, batch_size=2)
+
     print(len(data))
     print(data[0]['image'].shape)
     print(data[0]['embedding'].shape)
     print(data[0]['label'])
     print(data[0]['name'])
+    print(next(iter(dl))['image'].shape)
+

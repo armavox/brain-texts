@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from datetime import datetime
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
@@ -44,3 +45,42 @@ def plot_grad_flow(named_parameters, epoch, out_dir):
         os.makedirs(out_dir)
 
     plt.savefig(os.path.join(out_dir, f'epoch_{epoch}_gf.png'))
+
+
+def draw_plots(epochs, plots_path, prefix,
+               loss_train, loss_val, acc_val):
+
+        time_str = datetime.now().strftime('%Y-%m-%d%H-%M-%S')
+
+        plt.style.use("ggplot")
+        plt.figure()
+        plt.plot(np.arange(1, epochs + 1), loss_train,
+                 color='blue', label="train_loss")
+        plt.plot(np.arange(1, epochs + 1), loss_val,
+                 color='red', label="test_loss")
+        plt.title("Training Loss")
+        plt.xlabel("Epoch #")
+        plt.ylabel("Loss")
+        plt.legend(loc="upper right")
+        plt.savefig(os.path.join(plots_path,
+                                 "%s_loss_%s.png" % (prefix, time_str)),
+                    dpi=300)
+        plt.close()
+
+        plt.style.use("ggplot")
+        plt.figure()
+        plt.plot(np.arange(1, epochs + 1), acc_val,
+                 color='red', label="test_metric")
+        plt.title("Metric")
+        plt.xlabel("Epoch #")
+        plt.ylabel("Jaccard index")
+        plt.legend(loc="upper left")
+        plt.savefig(os.path.join(plots_path,
+                                 "%s_metric_%s.png" % (prefix, time_str)),
+                    dpi=300)
+        plt.close()
+
+
+def get_model_name(model):
+    r = model.__repr__()
+    return r[:r.find('(')]
