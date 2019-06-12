@@ -7,8 +7,8 @@ import numpy as np
 
 
 class TrainerTorchUNET224:
-    def __init__(self, model, train_loader, val_loader, checkpoint_path, criterion, optimizer, prefix, device='cpu',
-                 epochs=5):
+    def __init__(self, model, train_loader, val_loader, checkpoint_path,
+                 criterion, optimizer, prefix, device='cpu', epochs=5):
         self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -52,7 +52,9 @@ class TrainerTorchUNET224:
 
                 output = self.model(x)
                 loss, metric = self.criterion(output, target)
-                print('Train Epoch: {}. Batch: {}/{} train_loss: {:.8f}'.format(i, j, len(self.train_loader), loss.item()))
+                print('Train Epoch: {}. Batch: {}/{} train_loss: {:.8f}'.format(
+                    i, j, len(self.train_loader), loss.item()
+                ))
                 epoch_loss += loss.item()
                 epoch_metric += metric
                 loss.backward()
@@ -66,10 +68,12 @@ class TrainerTorchUNET224:
             loss_val.append(val_loss)
             acc_val.append(val_acc)
 
-            print('Train Epoch: {} train_loss: {:.8f} val_loss: {:.8f} jaccard: {:.8f}'.format(
-                    i, epoch_loss / len(self.train_loader), val_loss, val_acc))
+            print('Train Epoch: {} train_loss: {:.8f} val_loss: {:.8f} jaccard:\
+ {:.8f}'.format(i, epoch_loss / len(self.train_loader), val_loss, val_acc))
 
-            torch.save(self.model, os.path.join(self.checkpoint_path, "%s_batch_%s.pt" % (self.prefix, i)))
+            torch.save(self.model,
+                      os.path.join(self.checkpoint_path,
+                                   "%s_batch_%s.pt" % (self.prefix, i)))
 
         self.draw_plots(loss_train, acc_train, loss_val, acc_val)
 
@@ -82,7 +86,8 @@ class TrainerTorchUNET224:
             global_acc = 0
 
             for i, (x, target) in enumerate(self.val_loader):
-                x, target = x.to(self.device).float(), target.to(self.device).float()
+                x = x.to(self.device).float()
+                target = target.to(self.device).float()
 
                 output = self.model(x)
 
@@ -98,22 +103,28 @@ class TrainerTorchUNET224:
 
         plt.style.use("ggplot")
         plt.figure()
-        plt.plot(np.arange(1, self.epochs + 1), loss_train, color='blue', label="train_loss")
-        plt.plot(np.arange(1, self.epochs + 1), loss_val, color='red', label="test_loss")
+        plt.plot(np.arange(1, self.epochs + 1), loss_train,
+                 color='blue', label="train_loss")
+        plt.plot(np.arange(1, self.epochs + 1), loss_val,
+                 color='red', label="test_loss")
         plt.title("Training Loss")
         plt.xlabel("Epoch #")
         plt.ylabel("Loss")
         plt.legend(loc="upper right")
-        plt.savefig( os.path.join(self.plots_path, "%s_loss_%s.png" % (self.prefix, time_str)))
+        plt.savefig(os.path.join(self.plots_path,
+                                 "%s_loss_%s.png" % (self.prefix, time_str)),
+                    dpi=300)
         plt.close()
 
         plt.style.use("ggplot")
         plt.figure()
-        plt.plot(np.arange(1, self.epochs + 1), acc_val, color='red', label="test_metric")
-        plt.plot(np.arange(1, self.epochs + 1), acc_val, color='blue', label="train_metric")
+        plt.plot(np.arange(1, self.epochs + 1), acc_val,
+                 color='red', label="test_metric")
         plt.title("Metric")
         plt.xlabel("Epoch #")
         plt.ylabel("Jaccard index")
-        plt.legend(loc="upper right")
-        plt.savefig( os.path.join(self.plots_path, "%s_metric_%s.png" % (self.prefix, time_str)))
+        plt.legend(loc="upper left")
+        plt.savefig(os.path.join(self.plots_path,
+                                 "%s_metric_%s.png" % (self.prefix, time_str)),
+                    dpi=300)
         plt.close()

@@ -1,16 +1,19 @@
-from segmentation.model.zf_unet_224_model import ZF_UNET_224
-from segmentation.model.Unet224Torch import Unet224Torch
 import numpy as np
-from segmentation.eval.mask_helper import fixmask
+import matplotlib.pyplot as plt
+
 import torch
 import torch.nn as nn
 
-import matplotlib.pyplot as plt
+from segmentation.model.zf_unet_224_model import ZF_UNET_224
+from segmentation.model.Unet224Torch import Unet224Torch
+from segmentation.eval.mask_helper import fixmask
+
 
 def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
         yield l[i:i + n]
+
 
 class TestNet:
     def __init__(self, weight_path, tester_name, need_fix_mask, device):
@@ -24,7 +27,8 @@ class TestNet:
         self.__setting_model()
 
     def __setting_model(self):
-        self.model.load_state_dict(torch.load(self.weight_path, map_location=self.device).module.state_dict())
+        self.model.load_state_dict(torch.load(self.weight_path,
+                                   map_location=self.device).module.state_dict())
         if torch.cuda.is_available():
             if torch.cuda.device_count() > 1:
                 print(f'{torch.cuda.device_count()} GPUs used')
