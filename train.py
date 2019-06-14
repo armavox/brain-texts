@@ -67,7 +67,7 @@ def main():
     train_inds, val_inds, test_inds = train_val_holdout_split(
         data, ratios=[0.7, 0.3, 0]
     )
-    train_inds = [10,  6, 18, 16, 11,  9,  4,  8,  2, 17,  7, 12,  5,  0,  1] 
+    train_inds = [10,  6, 18, 16, 11,  9,  4,  8,  2, 17,  7, 12,  5,  0,  1]
     val_inds = [15, 13,  3, 14]
     print('INDS', train_inds, val_inds, test_inds)
     train_sampler = SubsetRandomSampler(train_inds)
@@ -80,25 +80,23 @@ def main():
                             sampler=val_sampler)
     test_loader = DataLoader(test_sampler)
 
-    # vgg = VGG11(combine_dim=2)
-    # vgg = vgg.to(dev)
-    model = BrainLSTM(embed_dim=768, hidden_dim=256, num_layers=1,
+    vgg = VGG11(combine_dim=2)
+    vgg = vgg.to(dev)
+    lstm = BrainLSTM(embed_dim=768, hidden_dim=256, num_layers=1,
                       context_size=2, combine_dim=2, dropout=0)
-    # lstm = lstm.to(dev)
+    lstm = lstm.to(dev)
 
     # model = EarlyFusion(combine_dim=4096)
     # model = VGG11(combine_dim=2)
-    model = model.to(dev)
+    # model = model.to(dev)
 
-    model_name = utils.get_model_name(model)
+    model_name = utils.get_model_name(vgg)
     prefix = "%s_lr=%s_bs=%s" % (model_name, args.lr, args.batch_size)
 
-    # if torch.cuda.device_count() > 1:
-    #     print(f"Using {n_gpu} CUDAs")
-    #     # dim = 0 [30, ...] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
-    #     lstm = nn.DataParallel(lstm)
-
-    opt = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-2)
+    opt = torch.optim.Adam([
+        {'params': lstm.parameters()},
+        {'params': vgg.parameters()}
+    ], lr=0.001, weight_decay=1e-2)
     schedlr = torch.optim.lr_scheduler.ExponentialLR(opt, 0.999)
 
     loss_func = nn.CrossEntropyLoss()
@@ -108,7 +106,8 @@ def main():
     loss_train = []
     loss_val, acc_val = [], []
     for epoch in range(args.epochs):
-        model.train()
+        lstm.train()
+        vgg.train()
         train_loss = 0
         for batch in train_loader:
 
@@ -116,19 +115,18 @@ def main():
             images = batch['image'].to(dev)
             embeddings = batch['embedding'].to(dev)
 
-            out = model(embeddings)#, images)  # embeddings, 
+            out_lstm = lstm(embeddings)#, images)  # embeddings, 
+            out_vgg = vgg(images)#, images)  # embeddings,
 
-            loss = loss_func(out, labels)
-            # l1_reg = torch.tensor(0.).to(dev)
-            # l2_reg = torch.tensor(0.).to(dev)
-            # for param in model.parameters():
-            #     l1_reg += torch.norm(param, p=1)
-            #     l2_reg += torch.norm(param)
-            # loss += 1e-1 * l2_reg + 1e-1 * l1_reg
+            loss_lstm = loss_func(out_lstm, labels)
+            loss_vgg = loss_func(out_vgg, labels)
+
+            loss = (loss_lstm + loss_vgg) / 2
+
             loss.backward()
 
-            utils.plot_grad_flow(model.named_parameters(),
-                                 epoch, 'grad_flow_plots')
+            # utils.plot_grad_flow(model.named_parameters(),
+            #                      epoch, 'grad_flow_plots')
             train_loss += loss.cpu().item()# - 1e-1 * l2_reg.cpu().item() - 1e-1 * l1_reg.cpu().item()
 
             opt.step()
@@ -141,7 +139,8 @@ def main():
 
         # VALIDATION
         if epoch % 1 == 0:
-            model.eval()
+            lstm.eval()
+            vgg.eval()
             val_loss = 0
             correct, total = 0, 0
             with torch.no_grad():
@@ -151,13 +150,19 @@ def main():
                     images = batch['image'].to(dev)
                     embeddings = batch['embedding'].to(dev)
 
-                    pred = model(embeddings)#, images)  # embeddings, 
+                    out_lstm = lstm(embeddings)#, images)  # embeddings, 
+                    out_vgg = vgg(images)#, images)  # embeddings,
 
-                    val_loss += loss_func(pred, labels)
-                    print(Fn.softmax(pred.data, dim=1))
+                    loss_lstm = loss_func(out_lstm, labels)
+                    loss_vgg = loss_func(out_vgg, labels)
+
+                    out = (out_lstm + out_vgg) / 2
+                    val_loss += (loss_lstm + loss_vgg) / 2
+
+                    print(Fn.softmax(out.data, dim=1))
                     print(labels)
-                    pred = pred.data.max(1)[1]
-                    correct += pred.eq(labels.data.view_as(pred)).cpu().sum()
+                    out = out.data.max(1)[1]
+                    correct += out.eq(labels.data.view_as(out)).cpu().sum()
                     total += labels.size(0)
 
                 val_loss /= len(val_loader)
@@ -167,10 +172,10 @@ def main():
 
                 print('Epoch: %03d Valid loss: %.4f Acc: %.2f' % (epoch, val_loss.item(), acc))
 
-                torch.save(
-                    model.state_dict(),
-                    f'/data/brain/checkpoints/{prefix}_ep_{epoch}.pth'
-                )
+                # torch.save(
+                #     model.state_dict(),
+                #     f'/data/brain/checkpoints/{prefix}_ep_{epoch}.pth'
+                # )
 
         schedlr.step()
 
