@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, SequentialSampler, SubsetRandomSampler
 from torch.utils.data import Subset
+import torch.nn.functional as Fn
 
 import utils
 from data_utils import BertFeaturesDataset, train_val_holdout_split
@@ -81,11 +82,11 @@ def main():
 
     # vgg = VGG11(combine_dim=2)
     # vgg = vgg.to(dev)
-    # lstm = BrainLSTM(embed_dim=768, hidden_dim=256, num_layers=1,
-    #                  context_size=2, combine_dim=2, dropout=0)
+    model = BrainLSTM(embed_dim=768, hidden_dim=256, num_layers=1,
+                      context_size=2, combine_dim=2, dropout=0)
     # lstm = lstm.to(dev)
 
-    model = EarlyFusion(combine_dim=4096)
+    # model = EarlyFusion(combine_dim=4096)
     # model = VGG11(combine_dim=2)
     model = model.to(dev)
 
@@ -115,7 +116,7 @@ def main():
             images = batch['image'].to(dev)
             embeddings = batch['embedding'].to(dev)
 
-            out = model(embeddings, images)  # embeddings, 
+            out = model(embeddings)#, images)  # embeddings, 
 
             loss = loss_func(out, labels)
             # l1_reg = torch.tensor(0.).to(dev)
@@ -150,9 +151,11 @@ def main():
                     images = batch['image'].to(dev)
                     embeddings = batch['embedding'].to(dev)
 
-                    pred = model(embeddings, images)  # embeddings, 
+                    pred = model(embeddings)#, images)  # embeddings, 
 
                     val_loss += loss_func(pred, labels)
+                    print(Fn.softmax(pred.data, dim=1))
+                    print(labels)
                     pred = pred.data.max(1)[1]
                     correct += pred.eq(labels.data.view_as(pred)).cpu().sum()
                     total += labels.size(0)
