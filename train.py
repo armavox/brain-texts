@@ -166,7 +166,7 @@ def main():
                     total += labels.size(0)
 
                 val_loss /= len(val_loader)
-                loss_val.append(val_loss)
+                loss_val.append(val_loss.item())
                 acc = 100. * correct / total
                 acc_val.append(acc)
 
@@ -182,6 +182,9 @@ def main():
     plots_path = 'train_plots'
     utils.draw_plots(args.epochs, plots_path, prefix,
                      loss_train, loss_val, acc_val)
+    np.save('late_loss_train.npy', loss_train)
+    np.save('late_loss_val.npy', loss_val)
+    
 
 
 if __name__ == "__main__":
