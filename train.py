@@ -82,11 +82,11 @@ def main():
 
     # vgg = VGG11(combine_dim=2)
     # vgg = vgg.to(dev)
-    model = BrainLSTM(embed_dim=768, hidden_dim=256, num_layers=1,
-                      context_size=2, combine_dim=2, dropout=0)
+    # model = BrainLSTM(embed_dim=768, hidden_dim=256, num_layers=1,
+    #                   context_size=2, combine_dim=2, dropout=0)
     # lstm = lstm.to(dev)
 
-    # model = EarlyFusion(combine_dim=4096)
+    model = EarlyFusion(combine_dim=4096)
     # model = VGG11(combine_dim=2)
     model = model.to(dev)
 
@@ -116,7 +116,7 @@ def main():
             images = batch['image'].to(dev)
             embeddings = batch['embedding'].to(dev)
 
-            out = model(embeddings)#, images)  # embeddings, 
+            out = model(embeddings, images)  # embeddings, 
 
             loss = loss_func(out, labels)
             # l1_reg = torch.tensor(0.).to(dev)
@@ -151,7 +151,7 @@ def main():
                     images = batch['image'].to(dev)
                     embeddings = batch['embedding'].to(dev)
 
-                    pred = model(embeddings)#, images)  # embeddings, 
+                    pred = model(embeddings, images)  # embeddings, 
 
                     val_loss += loss_func(pred, labels)
                     print(Fn.softmax(pred.data, dim=1))
@@ -161,22 +161,24 @@ def main():
                     total += labels.size(0)
 
                 val_loss /= len(val_loader)
-                loss_val.append(val_loss)
+                loss_val.append(val_loss.item())
                 acc = 100. * correct / total
                 acc_val.append(acc)
 
                 print('Epoch: %03d Valid loss: %.4f Acc: %.2f' % (epoch, val_loss.item(), acc))
 
-                torch.save(
-                    model.state_dict(),
-                    f'/data/brain/checkpoints/{prefix}_ep_{epoch}.pth'
-                )
+                # torch.save(
+                #     model.state_dict(),
+                #     f'/data/brain/checkpoints/{prefix}_ep_{epoch}.pth'
+                # )
 
         schedlr.step()
 
     plots_path = 'train_plots'
     utils.draw_plots(args.epochs, plots_path, prefix,
                      loss_train, loss_val, acc_val)
+    np.save('fuse_loss_train.npy', loss_train)
+    np.save('fuse_loss_val.npy', loss_val)
 
 
 if __name__ == "__main__":
