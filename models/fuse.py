@@ -18,7 +18,7 @@ class EarlyFusion(nn.Module):
         self.fusion = nn.Sequential(
             nn.Linear(combine_dim * 2, combine_dim),
             nn.LeakyReLU(inplace=True),
-            nn.Dropout(p=0.5),
+            # nn.Dropout(p=0.5),
             # nn.Linear(combine_dim, combine_dim),
             # nn.LeakyReLU(inplace=True),
             # nn.Dropout(p=0.5),

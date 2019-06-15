@@ -86,7 +86,7 @@ def main():
     #                   context_size=2, combine_dim=2, dropout=0)
     # lstm = lstm.to(dev)
 
-    model = EarlyFusion(combine_dim=4096)
+    model = EarlyFusion(combine_dim=2048)
     # model = VGG11(combine_dim=2)
     model = model.to(dev)
 
