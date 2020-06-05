@@ -7,9 +7,9 @@ channels:
 dependencies:
   - python=3.7
   - pandas=0.24.2
-  - pytorch=1.1.0
-  - torchvision=0.3.0
-  - cudatoolkit=10.0
+  - pytorch=1.5.0
+  - torchvision=0.6.0
+  - cudatoolkit=10.2
   - pydicom=1.2.2
   - pillow=6.0.0
   - opencv=3.4.2
@@ -17,7 +17,7 @@ dependencies:
   - albumentations=0.2.2
   - pip=19.1.1
   - pip:
-    - pytorch_pretrained_bert
+    - pytorch-pretrained-bert
     - nibabel==2.4.1
     - SimpleITK==1.2.0
     - imgaug>=0.2.5,<0.2.7
