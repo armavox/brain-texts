@@ -91,8 +91,9 @@ class MIMIC_CXR_DICOM_Study:
         dicom_image_list: List[MIMIC_CXR_DICOM_Image] = None,
         report_txt_path: str = None,
         folderpath: str = None,
-        chexpert_csv: str = None,
-        resize_shape=None,
+        chexpert_csv_path: str = None,
+        df_chexpert: pd.DataFrame = None,
+        resize_shape: tuple = None,
     ):
         assert (bool(dicom_image_list) and bool(report_txt_path)) ^ bool(
             folderpath
@@ -111,8 +112,10 @@ class MIMIC_CXR_DICOM_Study:
             self.id = int(os.path.basename(self._folderpath).strip("s"))
             self._parse_mimic_cxr_study_folder(self._folderpath)
             self.report = self._read_txt(self._folderpath + ".txt")
-            if chexpert_csv:
-                self.chexpert_labels: Dict[str, int] = self._parse_mimic_cxr_chexpert_csv(chexpert_csv)
+            if df_chexpert is not None:
+                self.chexpert_labels = self._parse_mimic_cxr_chexpert_csv(df_chexpert=df_chexpert)
+            elif chexpert_csv_path is not None:
+                self.chexpert_labels = self._parse_mimic_cxr_chexpert_csv(chexpert_csv=chexpert_csv_path)
 
     def __repr__(self):
         return f"Study id: {self.id}\nImages: {len(self.images)}\nREPORT\n======\n{self.report}"
@@ -133,17 +136,29 @@ class MIMIC_CXR_DICOM_Study:
         raw_report = re.sub(r"(\w+:)", r"\n\1", raw_report).strip("FINAL REPORT").strip("\n")
         return raw_report
 
-    def _parse_mimic_cxr_chexpert_csv(self, csv_path):
-        df_chexpert = pd.read_csv(csv_path)
+    def _parse_mimic_cxr_chexpert_csv(self, csv_path: str = None, df_chexpert: pd.DataFrame = None):
+        if df_chexpert is None:
+            try:
+                df_chexpert = pd.read_csv(csv_path)
+            except FileNotFoundError:
+                raise FileNotFoundError("Provide path to `mimic-cxr-2.0.0-chexpert.csv.gz`")
         chexpert_study = df_chexpert[df_chexpert["study_id"] == self.id]
         chexpert_study = chexpert_study.where(chexpert_study.notna(), None)
         return dict((k.lower().replace(" ", "_"), v) for k, v in chexpert_study.iloc[0].items())
 
 
 class MIMIC_CXR_DICOM_Subject:
-    def __init__(self, folderpath: str, chexpert_csv: str = None, resize_shape=None, **kwargs):
+    def __init__(
+        self,
+        folderpath: str,
+        chexpert_csv_path: str = None,
+        df_chexpert: pd.DataFrame = None,
+        resize_shape=None,
+        **kwargs,
+    ):
         self._folderpath: str = folderpath
-        self._chexpert_csv = chexpert_csv
+        self._chexpert_csv = chexpert_csv_path
+        self._df_chexpert = df_chexpert
         self._resize_shape = resize_shape
         self.id = int(os.path.basename(self._folderpath).strip("p"))
 
@@ -165,9 +180,17 @@ class MIMIC_CXR_DICOM_Subject:
         for path in glob.glob(os.path.join(folderpath, "*")):
             if os.path.isdir(path):
                 study_id = int(os.path.basename(path).strip("s"))
-                if self._chexpert_csv:
+                if self._chexpert_csv is not None:
                     study = MIMIC_CXR_DICOM_Study(
-                        folderpath=path, chexpert_csv=self._chexpert_csv, resize_shape=self._resize_shape
+                        folderpath=path,
+                        chexpert_csv_path=self._chexpert_csv,
+                        resize_shape=self._resize_shape,
+                    )
+                elif self._df_chexpert is not None:
+                    study = MIMIC_CXR_DICOM_Study(
+                        folderpath=path,
+                        df_chexpert=self._df_chexpert,
+                        resize_shape=self._resize_shape,
                     )
                 else:
                     study = MIMIC_CXR_DICOM_Study(folderpath=path, resize_shape=self._resize_shape)
@@ -183,8 +206,11 @@ class MIMIC_CXR_Dataset:
 
         if "mimic-cxr-2.0.0-chexpert.csv" in os.listdir(root_path):
             self.chexpert_csv_path = os.path.join(root_path, "mimic-cxr-2.0.0-chexpert.csv")
+            self.df_chexpert = pd.read_csv(self.chexpert_csv_path)
+
         elif "mimic-cxr-2.0.0-chexpert.csv.gz" in os.listdir(root_path):
             self.chexpert_csv_path = os.path.join(root_path, "mimic-cxr-2.0.0-chexpert.csv.gz")
+            self.df_chexpert = pd.read_csv(self.chexpert_csv_path)
         else:
             self.chexpert_csv_path = None
 
@@ -196,16 +222,32 @@ class MIMIC_CXR_Dataset:
         self.keys = sorted(self.patients.keys())
 
     def __getitem__(self, i):
-        return MIMIC_CXR_DICOM_Subject(self.patients[i], self.chexpert_csv_path, self._resize_shape)
+        return MIMIC_CXR_DICOM_Subject(
+            self.patients[self.keys[i]], df_chexpert=self.df_chexpert, resize_shape=self._resize_shape
+        )
 
     def __iter__(self):
         return MIMIC_CXR_Dataset_Iterator(self)
 
+    def __repr__(self):
+        return f"MIMIC-CXR Dataset. Subjects: {len(self.keys)}"
+
+    def get_subject(self, subject_id):
+        return MIMIC_CXR_DICOM_Subject(
+            self.patients[subject_id], df_chexpert=self.df_chexpert, resize_shape=self._resize_shape
+        )
+
     def get_study(self, study_id, return_subject_id=False):
-        df_chexpert = pd.read_csv(self.chexpert_csv_path)
-        study_df = df_chexpert[df_chexpert["study_id"] == study_id]
+        try:
+            study_df = self.df_chexpert[self.df_chexpert["study_id"] == study_id]
+        except AttributeError:
+            raise AttributeError(
+                "Download chexpert labels `mimic-cxr-2.0.0-chexpert.csv.gz` from MIMIC-CXR-JPG dataset"
+            )
         subject_id = study_df["subject_id"].iloc[0]
-        subject = MIMIC_CXR_DICOM_Subject(self.patients[subject_id], self.chexpert_csv_path, self._resize_shape)
+        subject = MIMIC_CXR_DICOM_Subject(
+            self.patients[subject_id], df_chexpert=self.df_chexpert, resize_shape=self._resize_shape
+        )
         if return_subject_id:
             return subject.studies[study_id], subject_id
         return subject.studies[study_id]
@@ -215,14 +257,14 @@ class MIMIC_CXR_Dataset_Iterator:
     def __init__(self, mimic_dataset):
         self.patients = mimic_dataset.patients
         self.keys = mimic_dataset.keys
-        self.chexpert_csv_path = mimic_dataset.chexpert_csv_path
+        self.df_chexpert = mimic_dataset.df_chexpert
         self.resize_shape = mimic_dataset._resize_shape
         self._i = 0
 
     def __next__(self):
         try:
             subj = MIMIC_CXR_DICOM_Subject(
-                self.patients[self.keys[self._i]], self.chexpert_csv_path, self.resize_shape
+                self.patients[self.keys[self._i]], df_chexpert=self.df_chexpert, resize_shape=self.resize_shape
             )
         except IndexError:
             raise StopIteration()
