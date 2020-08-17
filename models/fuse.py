@@ -12,11 +12,11 @@ class EarlyFusion(nn.Module):
         super().__init__()
         self.vgg = VGG11(combine_dim=combine_dim)
         self.lstm = BrainLSTM(embed_dim=768, hidden_dim=1024, num_layers=2,
-                              context_size=2, combine_dim=combine_dim,
+                              context_size=2, combine_dim=combine_dim // 2,
                               dropout=0)
 
         self.fusion = nn.Sequential(
-            nn.Linear(combine_dim * 2, combine_dim),
+            nn.Linear((combine_dim + combine_dim // 2), combine_dim),
             nn.LeakyReLU(inplace=True),
             # nn.Dropout(p=0.5),
             # nn.Linear(combine_dim, combine_dim),
@@ -26,10 +26,12 @@ class EarlyFusion(nn.Module):
             nn.LeakyReLU(inplace=True),
             nn.Linear(combine_dim // 2, 2)
         )
-    
+
     def forward(self, embeddings, images):
         embs_repr = self.lstm(embeddings)
         imgs_repr = self.vgg(images)
+
+        # norm = torch.norm((embs_repr - imgs_repr)) / (4*embs_repr.size(0)**2)
 
         x = torch.cat((embs_repr, imgs_repr), dim=1)
         x = self.fusion(x)

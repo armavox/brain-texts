@@ -29,7 +29,7 @@ import glob
 
 import numpy as np
 import pandas as pd
-import skimage
+import skimage.transform
 import nibabel
 import pydicom
 from PIL import Image

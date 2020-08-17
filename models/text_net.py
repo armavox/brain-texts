@@ -73,6 +73,7 @@ class BrainLSTM(nn.Module):
         # x.shape->(seq_len-context_size+1, batch_size, embed_dim*context_size)
 
         # Pass through LSTM and Linear layers
+        self.lstm.flatten_parameters()
         out, (final_hidden_state, final_cell_state) = self.lstm(x)
         # out.shape -> (seq_len-context_size+1, batch_size, 2*hidden_dim)
 
