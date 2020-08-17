@@ -123,6 +123,9 @@ class MIMIC_CXR_DICOM_Study:
     def __getitem__(self, i):
         return self.images[i]
 
+    def __len__(self):
+        return len(self.images)
+
     def _parse_mimic_cxr_study_folder(self, folderpath):
         flist = glob.glob(os.path.join(folderpath, "*.dcm"))
         for fpath in flist:
@@ -176,6 +179,9 @@ class MIMIC_CXR_DICOM_Subject:
         keys = list(self.studies)
         return self.studies[keys[i]]
 
+    def __len__(self):
+        return len(self.studies)
+
     def _parse_mimic_cxr_patient_folder(self, folderpath):
         for path in glob.glob(os.path.join(folderpath, "*")):
             if os.path.isdir(path):
@@ -225,6 +231,9 @@ class MIMIC_CXR_Dataset:
         return MIMIC_CXR_DICOM_Subject(
             self.patients[self.keys[i]], df_chexpert=self.df_chexpert, resize_shape=self._resize_shape
         )
+
+    def __len__(self):
+        return len(self.keys)
 
     def __iter__(self):
         return MIMIC_CXR_Dataset_Iterator(self)
