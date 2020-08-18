@@ -204,21 +204,15 @@ class MIMIC_CXR_DICOM_Subject:
 
 
 class MIMIC_CXR_Dataset:
-    def __init__(self, root_path: str, resize_shape=None):
+    def __init__(self, root_path: str, chexpert_csv_path: str = None, resize_shape=None):
 
         self.patients = {}
         self._files_folder = os.path.join(root_path, "files")
         self._resize_shape = resize_shape
+        self.df_chexpert = None
 
-        if "mimic-cxr-2.0.0-chexpert.csv" in os.listdir(root_path):
-            self.chexpert_csv_path = os.path.join(root_path, "mimic-cxr-2.0.0-chexpert.csv")
-            self.df_chexpert = pd.read_csv(self.chexpert_csv_path)
-
-        elif "mimic-cxr-2.0.0-chexpert.csv.gz" in os.listdir(root_path):
-            self.chexpert_csv_path = os.path.join(root_path, "mimic-cxr-2.0.0-chexpert.csv.gz")
-            self.df_chexpert = pd.read_csv(self.chexpert_csv_path)
-        else:
-            self.chexpert_csv_path = None
+        if chexpert_csv_path:
+            self.df_chexpert = pd.read_csv(chexpert_csv_path)
 
         for split_folder in glob.glob(os.path.join(self._files_folder, "*")):
             for pat_folder in glob.glob(os.path.join(split_folder, "*")):
