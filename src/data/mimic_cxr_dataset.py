@@ -1,4 +1,5 @@
 import glob
+import logging
 import os
 import re
 from typing import Dict, List
@@ -8,6 +9,9 @@ import pandas as pd
 import pydicom
 from skimage import exposure, transform
 from torch.utils.data import Dataset
+
+
+log = logging.getLogger("data.mimic-cxr-dataset")
 
 
 class MIMIC_CXR_DICOM_Image:
@@ -50,7 +54,7 @@ class MIMIC_CXR_DICOM_Image:
         try:
             image = image * dcm.RescaleSlope + dcm.RescaleIntercept
         except AttributeError as e:
-            print(f"image: {self.id}; study_id: {self.study_id}; AtributeError: {e.args[0]}")
+            log.debug(f"image: {self.id}; study_id: {self.study_id}; AtributeError: {e.args[0]}")
 
         image = self._map_to_01(image)
 
@@ -72,7 +76,7 @@ class MIMIC_CXR_DICOM_Image:
                 max(0, self.meta["CollimatorLeftVerticalEdge"]) : self.meta["CollimatorRightVerticalEdge"],
             ]
         except KeyError as e:
-            print(f"image: {self.id}; study_id: {self.study_id}; KeyError: {e.args[0]}")
+            log.debug(f"image: {self.id}; study_id: {self.study_id}; KeyError: {e.args[0]}")
 
         # Resize image if resize_shape was provided.
         if self._resize:
@@ -188,15 +192,11 @@ class MIMIC_CXR_DICOM_Subject:
                 study_id = int(os.path.basename(path).strip("s"))
                 if self._chexpert_csv is not None:
                     study = MIMIC_CXR_DICOM_Study(
-                        folderpath=path,
-                        chexpert_csv_path=self._chexpert_csv,
-                        resize_shape=self._resize_shape,
+                        folderpath=path, chexpert_csv_path=self._chexpert_csv, resize_shape=self._resize_shape,
                     )
                 elif self._df_chexpert is not None:
                     study = MIMIC_CXR_DICOM_Study(
-                        folderpath=path,
-                        df_chexpert=self._df_chexpert,
-                        resize_shape=self._resize_shape,
+                        folderpath=path, df_chexpert=self._df_chexpert, resize_shape=self._resize_shape,
                     )
                 else:
                     study = MIMIC_CXR_DICOM_Study(folderpath=path, resize_shape=self._resize_shape)
@@ -276,3 +276,46 @@ class MIMIC_CXR_Dataset_Iterator:
 
     def __iter__(self):
         return self
+
+
+class MIMICCXRTorchDataset(Dataset):
+    def __init__(self, root_path: str, cxr_chexpert_csv_path: str, label_name: str = None, transform=None):
+        df = pd.read_csv(cxr_chexpert_csv_path)
+
+        df10 = df[df["subject_id"].apply(lambda x: str(x).startswith("10"))]
+        chexpert_labels = df10[df10[label_name].notna()]
+        chexpert_labels = chexpert_labels[["study_id", label_name]].astype("int")
+        chexpert_labels = chexpert_labels[chexpert_labels[label_name] != -1]
+
+        study_ids = list(chexpert_labels.values[:, 0])
+        labels = list(chexpert_labels.values[:, 1])
+
+        self.data = [(sid, lab) for sid, lab in zip(study_ids, labels)]
+        self.mimic_dataset = MIMIC_CXR_Dataset(root_path, cxr_chexpert_csv_path)
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, i):
+        # Some can include no posterior-anterior images, some images can be in CR modality.
+        # Temporary, we skip them.
+
+        PA = True
+        while PA:
+            cyclic_index = (i - len(self)) % len(self)
+            study_id, label = self.data[cyclic_index]
+
+            study = self.mimic_dataset.get_study(study_id)
+            for image in study.images:
+                if image.meta["Modality"] == "DX" and image.meta["ViewPosition"] in ["PA", "AP"]:
+                    xray = image.image.astype(np.float32).reshape((1, *image.image.shape))
+                    PA = False
+            i += 1
+
+        sample = {"image": xray, "label": label, "study_id": study_id}
+
+        if self.transform:
+            sample = self.transform(sample)
+
+        return sample
