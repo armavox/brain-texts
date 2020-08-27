@@ -291,6 +291,7 @@ class MIMICCXRTorchDataset(Dataset):
         bert_pretrained_model="emilyalsentzer/Bio_ClinicalBERT",
         bert_num_pooled_layers: int = 4,
         bert_pooling_strategy: str = "cls",
+        split_folder: str = "10",
     ):
 
         self.bert_num_pooled_layers = bert_num_pooled_layers
@@ -299,7 +300,7 @@ class MIMICCXRTorchDataset(Dataset):
         df = pd.read_csv(cxr_chexpert_csv_path)
 
         # Take only p10 folder
-        df10 = df[df["subject_id"].apply(lambda x: str(x).startswith("10"))]
+        df10 = df[df["subject_id"].apply(lambda x: str(x).startswith(split_folder.strip("p")))]
 
         # Extract labels
         chexpert_labels = df10[df10[label_name].notna()]
