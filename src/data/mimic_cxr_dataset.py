@@ -7,8 +7,11 @@ from typing import Dict, List
 import numpy as np
 import pandas as pd
 import pydicom
+import torch
 from skimage import exposure, transform
 from torch.utils.data import Dataset
+from transformers import AutoTokenizer, AutoModel
+from transformers import pipeline
 
 
 log = logging.getLogger("data.mimic-cxr-dataset")
@@ -279,20 +282,53 @@ class MIMIC_CXR_Dataset_Iterator:
 
 
 class MIMICCXRTorchDataset(Dataset):
-    def __init__(self, root_path: str, cxr_chexpert_csv_path: str, label_name: str = None, transform=None):
+    def __init__(
+        self,
+        root_path: str,
+        cxr_chexpert_csv_path: str,
+        label_name: str = None,
+        transform=None,
+        bert_pretrained_model="emilyalsentzer/Bio_ClinicalBERT",
+        bert_num_pooled_layers: int = 4,
+        bert_pooling_strategy: str = "cls",
+    ):
+
+        self.bert_num_pooled_layers = bert_num_pooled_layers
+        self.bert_pooling_strategy = bert_pooling_strategy
+
         df = pd.read_csv(cxr_chexpert_csv_path)
 
+        # Take only p10 folder
         df10 = df[df["subject_id"].apply(lambda x: str(x).startswith("10"))]
+
+        # Extract labels
         chexpert_labels = df10[df10[label_name].notna()]
         chexpert_labels = chexpert_labels[["study_id", label_name]].astype("int")
+
+        # Exclude uncertainties
         chexpert_labels = chexpert_labels[chexpert_labels[label_name] != -1]
 
+        # Construct study list
         study_ids = list(chexpert_labels.values[:, 0])
         labels = list(chexpert_labels.values[:, 1])
-
         self.data = [(sid, lab) for sid, lab in zip(study_ids, labels)]
+
+        # Load generic dataset
         self.mimic_dataset = MIMIC_CXR_Dataset(root_path, cxr_chexpert_csv_path)
-        self.transform = transform
+
+        # Configure BERT model
+        if bert_pooling_strategy == "cls":
+            self.bert_feature_extractor = pipeline(
+                "feature-extraction",
+                model=AutoModel.from_pretrained(bert_pretrained_model),
+                tokenizer=AutoTokenizer.from_pretrained(bert_pretrained_model),
+            )
+        else:
+            self.model = AutoModel.from_pretrained(bert_pretrained_model)
+            self.tokenizer = AutoTokenizer.from_pretrained(bert_pretrained_model)
+
+        # Image augmentation transforms
+        self.img_transform = transform
 
     def __len__(self):
         return len(self.data)
@@ -308,14 +344,56 @@ class MIMICCXRTorchDataset(Dataset):
 
             study = self.mimic_dataset.get_study(study_id)
             for image in study.images:
-                if image.meta["Modality"] == "DX" and image.meta["ViewPosition"] in ["PA", "AP"]:
-                    xray = image.image.astype(np.float32).reshape((1, *image.image.shape))
+                if image.meta["Modality"] == "DX" and image.meta["ViewPosition"] in [
+                    "PA",
+                    "AP",
+                ]:
+                    xray = image.image.astype(np.float32).reshape(
+                        (1, *image.image.shape)
+                    )
                     PA = False
             i += 1
 
-        sample = {"image": xray, "label": label, "study_id": study_id}
+        study_report = re.sub(r"[^\w\s]|_+", " ", study.report)
 
-        if self.transform:
-            sample = self.transform(sample)
+        if self.bert_pooling_strategy == "cls":
+            report_embedding = np.array(self.bert_feature_extractor(study_report))[:, 0]
+
+        else:
+            pt_batch = self.tokenizer(study_report, return_tensors="pt")
+            with torch.no_grad():
+                _, _, hidden_states = self.model(**pt_batch, output_hidden_states=True)
+
+            summed_last_layers = torch.stack(hidden_states[-self.bert_num_pooled_layers:]).sum(0).squeeze()
+
+            if self.bert_pooling_strategy == "reduce_mean":
+                report_embedding = torch.mean(summed_last_layers, 0)
+            elif self.bert_pooling_strategy == "reduce_max":
+                report_embedding = torch.max(summed_last_layers, 0)[0]
+            elif self.bert_pooling_strategy == "none":
+                report_embedding = summed_last_layers
+            else:
+                raise AssertionError(
+                    "bert_pooling_strategy should be in ['cls', 'reduce_mean', 'reduce_max', 'none']"
+                )
+
+        sample = {
+            "image": xray,
+            "label": label,
+            "study_id": study_id,
+            "report": report_embedding.numpy(),
+        }
+
+        if self.img_transform is not None:
+            if callable(self.img_transform):
+                image = sample.pop("image").transpose(
+                    1, 2, 0
+                )  # convert to HWC to setu to Albumentations
+                image = self.img_transform(image=image)["image"].transpose(
+                    2, 0, 1
+                )  # back to CHW
+                sample = {"image": image, **sample}
+            else:
+                sample = self.img_transform(sample)
 
         return sample
