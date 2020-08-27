@@ -1,4 +1,6 @@
 import os
+import numpy as np
+import torch
 import torchvision as tv
 from torchvision.datasets.folder import has_file_allowed_extension
 
@@ -76,3 +78,64 @@ class DatasetFolder(tv.datasets.VisionDataset):
                         item = path, class_index
                         instances.append(item)
         return instances
+
+
+class PadCollate:
+    """ A variant of callate_fn that pads according to the longest sequence in
+    a batch of sequences
+    """
+
+    def __init__(self, dim=0, tensor_name="report", dataset_folder_used=False):
+        """
+        args:
+            dim - the dimension to be padded (dimension of sequence in tensor)
+        """
+        self.dim = dim
+        self.tensor_name = tensor_name
+        self.dataset_folder_used = dataset_folder_used
+
+    def __call__(self, batch):
+        return self.pad_collate(batch)
+
+    def pad_collate(self, batch):
+        if self.dataset_folder_used:
+            labels = [x[1] for x in batch]
+            batch = [x[0] for x in batch]
+        # report_seq = [torch.tensor(sample['report']) for sample in batch]
+        # torch.nn.utils.rnn.pad_sequence(seq, batch_first=True)
+
+        # find longest sequence and pad according to max_len
+        max_len = max(map(lambda x: x[self.tensor_name].shape[self.dim], batch))
+        for sample in batch:
+            sample[self.tensor_name] = self._pad_tensor(sample[self.tensor_name], pad=max_len, dim=self.dim)
+
+        # stack all
+        _batch = dict()
+        for key in batch[0].keys():
+            key_stack = tuple(map(lambda x: torch.tensor(x[key]), batch))
+            _batch[key] = torch.stack(key_stack, dim=0)
+
+        if self.dataset_folder_used:
+            return [_batch, torch.tensor(labels)]
+        return _batch
+
+    @staticmethod
+    def _pad_tensor(vec, pad, dim):
+        """
+        args:
+            vec - tensor to pad
+            pad - the size to pad to
+            dim - dimension to pad
+
+        return:
+            a new tensor padded to 'pad' in dimension 'dim'
+        """
+
+        pad_size = list(vec.shape)
+        pad_size[dim] = pad - vec.shape[dim]
+        if isinstance(vec, torch.Tensor):
+            return torch.cat([vec, torch.zeros(*pad_size)], dim=dim)
+        elif isinstance(vec, np.ndarray):
+            return np.concatenate([vec, np.zeros(pad_size, dtype=vec.dtype)], axis=dim)
+        else:
+            raise TypeError("vec should be instance of [np.ndarray, torch.Tensor]")
