@@ -48,4 +48,4 @@ class Resize:
 
             img = skimage.transform.resize(image, (d, new_h, new_w), preserve_range=True)
 
-        return {'image': img, **sample}
+        return {'image': img.transpose(1, 2, 0), **sample}
