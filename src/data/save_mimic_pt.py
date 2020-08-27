@@ -53,7 +53,7 @@ if __name__ == "__main__":
     dl = DataLoader(train_ds, batch_size=4, collate_fn=PadCollate(0))
     print(next(iter(dl)))
 
-    PT_DATASET_PATH = "/data/hdd2/mimic-cxr-pt/mimic-cxr-pt-dataset-224-bert-reports-no-pool"
+    PT_DATASET_PATH = "/data/hdd2/mimic-cxr-pt/mimic-cxr-pt-dataset-224-bert-reports-no-pool-squeezed"
 
     for sample in tqdm(train_ds, desc="train"):
         label, study_id = sample["label"], sample["study_id"]
