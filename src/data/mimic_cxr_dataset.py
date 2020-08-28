@@ -291,7 +291,7 @@ class MIMICCXRTorchDataset(Dataset):
         bert_pretrained_model="emilyalsentzer/Bio_ClinicalBERT",
         bert_num_pooled_layers: int = 4,
         bert_pooling_strategy: str = "cls",
-        split_folder: str = "10",
+        split_folder: str = "p10",
     ):
 
         self.bert_num_pooled_layers = bert_num_pooled_layers

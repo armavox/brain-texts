@@ -24,15 +24,16 @@ if __name__ == "__main__":
         label_name="Pneumonia",
         transform=A.Resize(224, 224, always_apply=True),
         bert_pooling_strategy="none",
+        split_folder="p11",
     )
 
     train_len, val_len, test_len = get_split_legths(ds, ratio=TRAIN_VAL_TEST_RATIO)
     train_ds, valid_ds, test_ds = torch.utils.data.random_split(ds, [train_len, val_len, test_len])
 
-    dl = DataLoader(train_ds, batch_size=4, collate_fn=PadCollate(0))
+    dl = DataLoader(train_ds, batch_size=32, collate_fn=PadCollate(0))
     print(next(iter(dl)))
 
-    PT_DATASET_PATH = "/data/hdd2/mimic-cxr-pt/mimic-cxr-pt-dataset-224-bert-reports-no-pool-squeezed"
+    PT_DATASET_PATH = "/data/hdd2/mimic-cxr-pt/mimic-cxr-pt-dataset-224-bert-reports-no-pool-p11"
 
     for sample in tqdm(train_ds, desc="train"):
         label, study_id = sample["label"], sample["study_id"]
