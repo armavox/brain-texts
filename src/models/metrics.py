@@ -35,6 +35,9 @@ class Metrics(nn.Module):
                 results.update({f"{self.pref}_{metric.name}": metric(preds.cpu(), trues.cpu())})
         return results
 
+    def get_mean(self):
+        return dict((k, float(v.mean())) for k, v in self.get().items())
+
 
 class Performance:
     def __init__(self, y_hat, y_actual):
