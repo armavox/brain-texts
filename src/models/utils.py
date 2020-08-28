@@ -62,3 +62,19 @@ class CosineAnnealingWarmUpRestarts(_LRScheduler):
         self.last_epoch = math.floor(epoch)
         for param_group, lr in zip(self.optimizer.param_groups, self.get_lr()):
             param_group["lr"] = lr
+
+
+class FeaturesHook():
+    def __init__(self, m, grad=False):
+        self.grad = grad
+        self.features = None
+        self.hook = m.register_forward_hook(self.hook_fn)
+
+    def hook_fn(self, module, inp, output):
+        if self.grad:
+            self.features = output
+        else:
+            self.features = output.cpu().data.numpy()
+
+    def remove(self):
+        self.hook.remove()
