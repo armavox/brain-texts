@@ -34,3 +34,33 @@ class Metrics(nn.Module):
             for metric in self.metrics:
                 results.update({f"{self.pref}_{metric.name}": metric(preds.cpu(), trues.cpu())})
         return results
+
+
+class Performance:
+    def __init__(self, y_hat, y_actual):
+        self.TP, self.FP, self.TN, self.FN = 0, 0, 0, 0
+
+        for i in range(len(y_hat)):
+            if y_actual[i] == y_hat[i] == 1:
+                self.TP += 1
+            if y_hat[i] == 1 and y_actual[i] != y_hat[i]:
+                self.FP += 1
+            if y_actual[i] == y_hat[i] == 0:
+                self.TN += 1
+            if y_hat[i] == 0 and y_actual[i] != y_hat[i]:
+                self.FN += 1
+
+    def __repr__(self):
+        return f"TP:{self.TP}, FP:{self.FP}, TN:{self.TN}, FN:{self.FN}"
+
+    @property
+    def sensitivity(self):
+        return self.TP / (self.TP + self.FN)
+
+    @property
+    def specificity(self):
+        return self.TN / (self.TN + self.FP)
+
+    @property
+    def precision(self):
+        return self.TP / (self.TP + self.FP)
