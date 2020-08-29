@@ -1,6 +1,9 @@
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import pytorch_lightning.metrics as M
+import pytorch_lightning.metrics.functional as FM
+from sklearn import metrics
 
 
 class Metrics(nn.Module):
@@ -40,9 +43,14 @@ class Metrics(nn.Module):
 
 
 class Performance:
-    def __init__(self, y_hat, y_actual):
-        self.TP, self.FP, self.TN, self.FN = 0, 0, 0, 0
+    def __init__(self, y_hat, y_actual, logits=True):
+        self.probs, self.trues = y_hat, y_actual
 
+        if logits:
+            self.probs = y_hat.softmax(1)
+            y_hat = self.probs.argmax(1)
+
+        self.TP, self.FP, self.TN, self.FN = 0, 0, 0, 0
         for i in range(len(y_hat)):
             if y_actual[i] == y_hat[i] == 1:
                 self.TP += 1
@@ -57,6 +65,10 @@ class Performance:
         return f"TP:{self.TP}, FP:{self.FP}, TN:{self.TN}, FN:{self.FN}"
 
     @property
+    def accuracy(self):
+        return (self.TP + self.TN) / (self.TP + self.TN + self.FP + self.FN)
+
+    @property
     def sensitivity(self):
         return self.TP / (self.TP + self.FN)
 
@@ -67,3 +79,56 @@ class Performance:
     @property
     def precision(self):
         return self.TP / (self.TP + self.FP)
+
+    @property
+    def negative_predictive_value(self):
+        return self.TN / (self.TN + self.FN)
+
+    @property
+    def fpr(self):
+        return self.FP / (self.FP + self.TN)
+
+    @property
+    def mcc(self):
+        num = self.TP * self.TN - self.FP * self.FN
+        den = ((self.TP + self.FP) * (self.TP + self.FN) * (self.TN + self.FP) * (self.TN + self.FN)) ** 1 / 2
+        return num / den
+
+    @property
+    def roc(self):
+        fpr, tpr, thr = FM.roc(self.preds[:, 1], self.trues)
+        fpr, tpr, thr = fpr.numpy(), tpr.numpy(), thr.numpy()
+        return fpr, tpr, thr
+
+    @property
+    def pr(self):
+        pr, rec, thr = FM.precision_recall_curve(self.preds[:, 1], self.trues)
+        pr, rec, thr = pr.numpy(), rec.numpy(), thr.numpy()
+        return pr, rec, thr
+
+    @property
+    def auroc(self):
+        fpr, tpr, _ = self.roc
+        return metrics.auc(fpr, tpr)
+
+    @property
+    def aupr(self):
+        pr, rec, _ = self.pr
+        return metrics.auc(rec, pr)
+
+    def plot_roc_pr_curves(self):
+        fpr, tpr, roc_thr = self.roc
+        pr, rec, pr_thr = self.pr
+
+        fig, ax = plt.subplots(1, 2, figsize=(16, 4))
+        ax[0].plot(fpr, tpr)
+        ax[0].set_title(f"ROC. AUC: {self.auroc:.4f}")
+        ax_thr = ax[0].twinx()
+        ax_thr.plot(fpr[1:], roc_thr[1:], c='orange')
+
+        ax[1].step(rec, pr)
+        ax[1].set_title(f'PR. AUC: {self.aupr:.4f}')
+        ax_thr = ax[1].twinx()
+        ax_thr.plot(rec[:-1], pr_thr, c='orange')
+
+        return fig
