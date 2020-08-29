@@ -72,27 +72,53 @@ class Performance:
 
     @property
     def accuracy(self):
-        return (self.TP + self.TN) / (self.TP + self.TN + self.FP + self.FN)
+        try:
+            acc = (self.TP + self.TN) / (self.TP + self.TN + self.FP + self.FN)
+        except ZeroDivisionError:
+            acc = 0
+        return acc
 
     @property
     def sensitivity(self):
-        return self.TP / (self.TP + self.FN)
+        try:
+            sens = self.TP / (self.TP + self.FN)
+        except ZeroDivisionError:
+            sens = 0
+        return sens
 
     @property
     def specificity(self):
-        return self.TN / (self.TN + self.FP)
+        try:
+            spec = self.TN / (self.TN + self.FP)
+        except ZeroDivisionError:
+            spec = 0
+        return spec
 
     @property
     def precision(self):
-        return self.TP / (self.TP + self.FP)
+
+        try:
+            prec = self.TP / (self.TP + self.FP)
+        except ZeroDivisionError:
+            prec = 0
+        return prec
 
     @property
     def negative_predictive_value(self):
-        return self.TN / (self.TN + self.FN)
+
+        try:
+            npv = self.TN / (self.TN + self.FN)
+        except ZeroDivisionError:
+            npv = 0
+        return npv
 
     @property
     def fpr(self):
-        return self.FP / (self.FP + self.TN)
+        try:
+            fpr = self.FP / (self.FP + self.TN)
+        except ZeroDivisionError:
+            fpr = 0
+        return fpr
 
     @property
     def mcc(self):
