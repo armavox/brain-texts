@@ -41,6 +41,12 @@ class Metrics(nn.Module):
     def get_mean(self):
         return dict((k, float(v.mean())) for k, v in self.get().items())
 
+    def get_perf(self):
+        trues = torch.cat(self.trues, dim=0)
+        preds = torch.cat(self.preds, dim=0)
+        perf = Performance(preds, trues, logits=True)
+        return perf
+
 
 class Performance:
     def __init__(self, y_hat, y_actual, logits=True):
@@ -96,13 +102,13 @@ class Performance:
 
     @property
     def roc(self):
-        fpr, tpr, thr = FM.roc(self.preds[:, 1], self.trues)
+        fpr, tpr, thr = FM.roc(self.probs[:, 1], self.trues)
         fpr, tpr, thr = fpr.numpy(), tpr.numpy(), thr.numpy()
         return fpr, tpr, thr
 
     @property
     def pr(self):
-        pr, rec, thr = FM.precision_recall_curve(self.preds[:, 1], self.trues)
+        pr, rec, thr = FM.precision_recall_curve(self.probs[:, 1], self.trues)
         pr, rec, thr = pr.numpy(), rec.numpy(), thr.numpy()
         return pr, rec, thr
 
@@ -116,19 +122,33 @@ class Performance:
         pr, rec, _ = self.pr
         return metrics.auc(rec, pr)
 
-    def plot_roc_pr_curves(self):
+    @property
+    def average_precision_score(self):
+        return metrics.average_precision_score(self.trues.numpy(), self.probs[:, 1].numpy())
+
+    def plot_roc_pr_curves(self, figsize=(16, 4), title=""):
         fpr, tpr, roc_thr = self.roc
         pr, rec, pr_thr = self.pr
 
-        fig, ax = plt.subplots(1, 2, figsize=(16, 4))
+        fig, ax = plt.subplots(1, 2, figsize=figsize)
         ax[0].plot(fpr, tpr)
         ax[0].set_title(f"ROC. AUC: {self.auroc:.4f}")
+        ax[0].set_xlabel("fpr")
+        ax[0].set_ylabel("recall (tpr)")
         ax_thr = ax[0].twinx()
         ax_thr.plot(fpr[1:], roc_thr[1:], c='orange')
+        ax_thr.tick_params(axis='y', labelcolor='orange')
+        ax_thr.set_ylabel('threshold', color='orange')
 
         ax[1].step(rec, pr)
         ax[1].set_title(f'PR. AUC: {self.aupr:.4f}')
+        ax[1].set_xlabel("recall (tpr)")
+        ax[1].set_ylabel("precision")
         ax_thr = ax[1].twinx()
         ax_thr.plot(rec[:-1], pr_thr, c='orange')
+        ax_thr.tick_params(axis='y', labelcolor='orange')
+        ax_thr.set_ylabel('threshold', color='orange')
+
+        fig.suptitle(title, y=1.01)
 
         return fig
